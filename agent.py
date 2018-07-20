@@ -2,47 +2,68 @@ import logging
 import sys
 import time
 
-from settings import AgentConfig
+import paho.mqtt.client as mqtt_client
+
+from config import AgentConfig
+from pacer import Pacer
+
+logger = logging.getLogger(__name__)
 
 
 class Agent:
     def __init__(self):
         self._config = AgentConfig()
+        self._go = False
 
-    def main(self):
-        self._initialise()
-        self.run()
+        # Our MQTT client
+        self._client = mqtt_client.Client()
 
-    def _initialise(self):
+        # Setup logger
         root = logging.getLogger()
         root.setLevel(self._config.logger.level)
 
-        # Setup logger
         ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(self._config.logger.level)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
         ch.setFormatter(formatter)
         root.addHandler(ch)
 
-        self.logger = logging.getLogger(self._config.logger.name)
-        self.logger.info('Initialising.')
+    def initialise(self):
+        logger.info('Initialising.')
+
+        # Connect to MQTT
+        self._client.connect_async(host=self._config.mqtt.host, port=self._config.mqtt.port)
+        self._client.loop_start()
 
     def run(self):
-        print("running")
+        self._go = True
         self._control_loop()
+        self._client.disconnect()
+
+    def terminate(self):
+        self._go = False
+        self._client.loop_stop()
 
     def _control_loop(self):
-        self.logger.info('Running control loop.')
-        start_time = time.time()
-        while True:
-            self.logger.debug('Tick t={}'.format(start_time))
+        logger.info('Running control loop.')
+        pacer = Pacer()
+        while self._go:
+            now = time.time()
+            logger.debug('Tick t={}'.format(now))
+
+            # Tick all parts of the system from here
+            self._client.publish("test", "hello " + str(now), qos=1)
 
             # Pace control loop per desired interval
-            sleep_time = self._config.control_loop_seconds - (time.time() - start_time)
-            time.sleep(sleep_time)
-            start_time = time.time()
+            try:
+                pacer.pace(now, self._config.control_loop_seconds)
+            except KeyboardInterrupt:
+                self.terminate()
+
+        logger.info('Control loop terminated.')
 
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.main()
+    agent.initialise()
+    agent.run()

@@ -7,7 +7,7 @@ class MqttConfig:
 
 
 class LoggerConfig:
-    level = 'DEBUG'
+    level = 'INFO'
 
 
 class AgentConfig:

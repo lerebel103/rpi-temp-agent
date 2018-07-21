@@ -22,15 +22,13 @@ class TempSensors:
     def sensors(self):
         return self._sensors
 
-    @property
     def board_temp(self):
         return self._board_temp
 
-    @property
     def sensor_temp(self, sensor):
         return self._temps[sensor]
 
-    def tick(self):
+    def tick(self, now):
         board_temps = 0
         for sensor in self._sensors:
             temps = DS.readMax31850(False, self._pin, sensor)
@@ -38,7 +36,7 @@ class TempSensors:
             board_temps += temps[1]
             # There is a third element, not sure what we could do with that.
 
-        if len(self._sensors) > 0
+        if len(self._sensors) > 0:
             self._board_temp = board_temps / len(self._sensors)
 
         # Start the conversion for the next loop

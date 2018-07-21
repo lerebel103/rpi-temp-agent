@@ -54,18 +54,18 @@ class Agent:
         pacer = Pacer()
         while self._go:
             now = time.time()
-            logger.debug('Tick t={}'.format(now))
 
             # Tick temp sensors
             self._temp_sensors.tick(now)
             temps = ''
             for sensor in self._temp_sensors.sensors:
-                temps += '{:.3f} '.format(self._temp_sensors.sensor_temp(sensor))
+                temps += '{:.3f} '.format( self._temp_sensors.sensor_temp(sensor) )
 
             # Tick all parts of the system from here
-            self._client.publish('test',
-                                 'temps={}, board={}, time={}'.format(temps, self._temp_sensors.board_temp, now), qos=1)
+            msg = 'temps={}, board={}, time={}'.format(temps, self._temp_sensors.board_temp(), now)
+            self._client.publish('test',msg , qos=1)
 
+            logger.info(msg)
             # Pace control loop per desired interval
             try:
                 pacer.pace(now, self._config.control_loop_seconds)

@@ -13,4 +13,5 @@ class Pacer:
                 sleep(sleep_time)
         else:
             self._time_line = time_now
+            sleep(interval)
         self._time_line += interval

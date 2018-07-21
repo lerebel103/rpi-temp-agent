@@ -1,7 +1,6 @@
 import logging
 
 import DS18B20 as DS
-from numpy import mean
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +31,15 @@ class TempSensors:
         return self._temps[sensor]
 
     def tick(self):
-        board_temps = []
+        board_temps = 0
         for sensor in self._sensors:
             temps = DS.readMax31850(False, self._pin, sensor)
             self._temps[sensor] = temps[0]
-            board_temps.append(temps[1])
+            board_temps += temps[1]
             # There is a third element, not sure what we could do with that.
-        self._board_temp = mean(board_temps)
+
+        if len(self._sensors) > 0
+            self._board_temp = board_temps / len(self._sensors)
 
         # Start the conversion for the next loop
         logger.debug('Start Conversion on pin {}'.format(self._pin))

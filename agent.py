@@ -58,9 +58,13 @@ class Agent:
 
             # Tick temp sensors
             self._temp_sensors.tick(now)
+            temps = ''
+            for sensor in self._temp_sensors.sensors:
+                temps += '{:.3f} '.format(self._temp_sensors.sensor_temp(sensor))
 
             # Tick all parts of the system from here
-            self._client.publish("test", "hello " + str(now), qos=1)
+            self._client.publish('test',
+                                 'temps={}, board={}, time={}'.format(temps, self._temp_sensors.board_temp, now), qos=1)
 
             # Pace control loop per desired interval
             try:

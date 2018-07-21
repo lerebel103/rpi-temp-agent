@@ -14,6 +14,7 @@ class TempSensors:
     def initialise(self):
         self._sensors = DS.scan(self._pin)
         logger.info('Found temperature sensors with ids {}'.format(self._sensors))
+        DS.pinsStartConversion([self._pin])
 
     def tick(self, tick_time):
         for sensor in self._sensors:
@@ -21,4 +22,6 @@ class TempSensors:
             print(temps)
 
         # Start the conversion for the next loop
-        DS.pinsStartConversion(self._pin)
+        logger.info('Start Conversion on pin {}'.format(self._pin))
+        DS.pinsStartConversion([self._pin])
+

@@ -6,6 +6,7 @@ import paho.mqtt.client as mqtt_client
 
 from config import AgentConfig
 from pacer import Pacer
+from sensors import TempSensors
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class Agent:
     def __init__(self):
         self._config = AgentConfig()
         self._go = False
+        self._temp_sensors = TempSensors(self._config.temperature_gpio)
 
         # Our MQTT client
         self._client = mqtt_client.Client()
@@ -31,8 +33,11 @@ class Agent:
     def initialise(self):
         logger.info('Initialising.')
 
+        # Initialise temp sensors
+        self._temp_sensors.initialise()
         # Connect to MQTT
         self._client.connect_async(host=self._config.mqtt.host, port=self._config.mqtt.port)
+        # Start control loop
         self._client.loop_start()
 
     def run(self):
@@ -50,6 +55,9 @@ class Agent:
         while self._go:
             now = time.time()
             logger.debug('Tick t={}'.format(now))
+
+            # Tick temp sensors
+            self._temp_sensors.tick(now)
 
             # Tick all parts of the system from here
             self._client.publish("test", "hello " + str(now), qos=1)

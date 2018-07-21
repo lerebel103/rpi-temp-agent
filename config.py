@@ -12,5 +12,9 @@ class LoggerConfig:
 
 class AgentConfig:
     mqtt = MqttConfig()
+
     logger = LoggerConfig()
+
+    temperature_gpio = 4
+
     control_loop_seconds = 1

@@ -15,6 +15,7 @@ class BlowerFan:
         self._pin_relay = gpio_pin_relay
         self._pwm_freq = 1600  # Hz
         self._pwm = None
+        self._duty_cycle = 0
         self.is_on = False
         self._pulse_counter = RpmPulseCounter(gpio_pin_rpm)
 
@@ -39,14 +40,11 @@ class BlowerFan:
             # Start RPM pulse counter
             self._pulse_counter.start()
             # Start PWM
-            self._pwm.start(0)
-            self._pwm.ChangeDutyCycle(0)
+            self._pwm.start(self.duty_cycle)
             # Switch fan on
             GPIO.output(self._pin_relay, 1)
             self.is_on = True
             logger.info('Blower Fan started.')
-        else:
-            logger.warning('Blower Fan already started.')
 
     def off(self):
         """ Switches the fan off, stops PWM and stops monitoring RPM. """
@@ -54,24 +52,38 @@ class BlowerFan:
             # Switch fan off
             GPIO.output(self._pin_relay, 0)
             # Switch PWM off
+            self.duty_cycle = 0
             self._pwm.stop()
             # Switch pulse counter off
             self._pulse_counter.stop()
             self.is_on = False
             logger.info('Blower Fan PWM stopped.')
-        else:
-            logger.warning('Blower Fan already stopped.')
 
+    @property
     def rpm(self):
         """ Read RPM from Sensor wire. """
         return self._pulse_counter.rpm
 
-    def set_duty_cycle(self, duty):
+    @property
+    def duty_cycle(self):
+        """ Current duty cycle at which the Fan is running. """
+        return self._duty_cycle
+
+    @duty_cycle.setter
+    def duty_cycle(self, duty_cycle):
         """ Specifies PWM duty cycle to run the fan at.
         \:param duty [0-100]
         """
-        self._pwm.ChangeDutyCycle(duty)
+        self._pwm.ChangeDutyCycle(duty_cycle)
+        self._duty_cycle = duty_cycle
 
+    @property
+    def is_healthy(self):
+        """ Checks that fan is spinning when we expect it to. """
+        if self.is_on and self.duty_cycle > 0 and self.rpm == 0:
+            return False
+        else:
+            return True
 
 class RpmPulseCounter:
     """ Simple wrapper that counts pulses from the Fan's yellow wire to deduce RPM. """

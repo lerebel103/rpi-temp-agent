@@ -3,13 +3,13 @@ import logging
 import sys
 import time
 
+import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt_client
 
-from blower_fan import BlowerFan
 from config import AgentConfig
 from pacer import Pacer
-from temperature_sensors import Max31850Sensors
-import RPi.GPIO as GPIO
+from peripherals.blower_fan import BlowerFan
+from peripherals.temperature_sensors import Max31850Sensors
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +57,14 @@ class Agent:
         self._client.disconnect()
 
     def terminate(self):
-        # Caues the control loop to stop
+        # Causes the control loop to stop
         self._go = False
+
         # Turn off fan as precaution
-        self._blower_fan.off()
-        # And comms go.
+        if self._blower_fan.is_on:
+            self._blower_fan.off()
+
+        # Terminates communications.
         self._client.loop_stop()
 
         # We are done with GPIOs.
@@ -81,8 +84,12 @@ class Agent:
                 temp, status = self._temp_sensors.sensor_temp(sensor)
                 temps += '[{:.3f}, {}] '.format(temp, status)
 
-            self._blower_fan.set_duty_cycle(1)
-            rpm = self._blower_fan.rpm()
+            # Set fan duty cycle
+            self._blower_fan.duty_cycle = 1
+            rpm = self._blower_fan.rpm
+
+            if not self._blower_fan.is_healthy:
+                print("**************** FAN NOT SPINNING.")
 
             # Tick all parts of the system from here
             msg = 'rpm={} temps={}, board={}'.format(rpm, temps, self._temp_sensors.board_temp())

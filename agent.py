@@ -10,6 +10,7 @@ from config import AgentConfig
 from pacer import Pacer
 from peripherals.blower_fan import BlowerFan
 from peripherals.temperature_sensors import Max31850Sensors
+from pid import PID
 
 logger = logging.getLogger(__name__)
 
@@ -75,39 +76,52 @@ class Agent:
         pacer = Pacer()
         self._blower_fan.on()
         self._temp_sensors.on()
-        while self._go:
-            now = time.time()
 
-            # Read sensor temps
-            temps = ''
-            for sensor in self._temp_sensors.sensors:
-                temp, status = self._temp_sensors.sensor_temp(sensor)
-                if temp is not None:
-                    temps += '[{:.3f}, {}] '.format(temp, status)
-                else:
-                    temps += '[--, {}] '.format(status)
+        # Here's our PID
+        pid = PID()
+        pid.set_point = 40
 
-            # Set fan duty cycle
-            self._blower_fan.duty_cycle = 1
-            rpm = self._blower_fan.rpm
+        try:
+            while self._go:
+                now = time.time()
 
-            if not self._blower_fan.is_healthy:
-                print("**************** FAN NOT SPINNING.")
+                # Read sensor temps
+                bbq_temp = None
+                temps = ''
+                for sensor in self._temp_sensors.sensors:
+                    temp, status = self._temp_sensors.sensor_temp(sensor)
+                    if temp is not None and status == Max31850Sensors.Status.OK:
+                        bbq_temp = temp
+                        temps += '[{:.3f}, {}] '.format(temp, status)
+                    else:
+                        bbq_temp = None
+                        temps += '[--, {}] '.format(status)
 
-            # Tick all parts of the system from here
-            msg = 'rpm={} temps={}, board={}'.format(rpm, temps, self._temp_sensors.board_temp())
-            self._client.publish('test', msg, qos=1)
+                if bbq_temp is not None:
+                    output = pid.update(now, bbq_temp)
+                    # Set fan duty cycle
+                    print(output)
+                    self._blower_fan.duty_cycle = output
 
-            logger.info(msg)
-            # Pace control loop per desired interval
-            try:
-                pacer.pace(now, self._config.control_loop_seconds)
-            except KeyboardInterrupt:
-                self.terminate()
+                rpm = self._blower_fan.rpm
 
-        self._temp_sensors.off()
-        self._blower_fan.off()
-        logger.info('Control loop terminated.')
+                if not self._blower_fan.is_healthy:
+                    print("**************** FAN NOT SPINNING.")
+
+                # Tick all parts of the system from here
+                msg = 'rpm={} temps={}, board={}'.format(rpm, temps, self._temp_sensors.board_temp())
+                self._client.publish('test', msg, qos=1)
+
+                logger.info(msg)
+                # Pace control loop per desired interval
+                try:
+                    pacer.pace(now, self._config.control_loop_seconds)
+                except KeyboardInterrupt:
+                    self.terminate()
+        finally:
+            self._temp_sensors.off()
+            self._blower_fan.off()
+            logger.info('Control loop terminated.')
 
 
 if __name__ == "__main__":

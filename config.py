@@ -17,4 +17,10 @@ class AgentConfig:
 
     temperature_gpio = 4
 
+    blower_fan_gpio_pwm = 12
+
+    blower_fan_gpio_relay = 5
+
+    blower_fan_gpio_rpm = 6
+
     control_loop_seconds = 1

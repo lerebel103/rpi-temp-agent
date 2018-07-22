@@ -5,18 +5,26 @@ import time
 
 import paho.mqtt.client as mqtt_client
 
+from blower_fan import BlowerFan
 from config import AgentConfig
 from pacer import Pacer
-from sensors import Max31850Sensors
+from temperature_sensors import Max31850Sensors
+import RPi.GPIO as GPIO
 
 logger = logging.getLogger(__name__)
 
 
 class Agent:
     def __init__(self):
+        # Init GPIO
+        GPIO.setmode(GPIO.BCM)
+
         self._config = AgentConfig()
         self._go = False
         self._temp_sensors = Max31850Sensors(self._config.temperature_gpio)
+        self._blower_fan = BlowerFan(self._config.blower_fan_gpio_relay,
+                                     self._config.blower_fan_gpio_pwm,
+                                     self._config.blower_fan_gpio_rpm)
 
         # Our MQTT client
         self._client = mqtt_client.Client()
@@ -34,8 +42,10 @@ class Agent:
     def initialise(self):
         logger.info('Initialising.')
 
-        # Initialise temp sensors
+        # Initialise peripherals
         self._temp_sensors.initialise()
+        self._blower_fan.initisalise()
+
         # Connect to MQTT
         self._client.connect_async(host=self._config.mqtt.host, port=self._config.mqtt.port)
         # Start control loop
@@ -48,11 +58,14 @@ class Agent:
 
     def terminate(self):
         self._go = False
+        self._blower_fan.terminate()
         self._client.loop_stop()
+        GPIO.cleanup()
 
     def _control_loop(self):
         logger.info('Running control loop.')
         pacer = Pacer()
+        self._blower_fan.on()
         while self._go:
             now = time.time()
 
@@ -63,9 +76,12 @@ class Agent:
                 temp, status = self._temp_sensors.sensor_temp(sensor)
                 temps += '[{:.3f}, {}] '.format(temp, status)
 
+            self._blower_fan.set_duty_cycle(10)
+            rpm = self._blower_fan.rpm()
+
             # Tick all parts of the system from here
-            msg = 'temps={}, board={}, time={}'.format(temps, self._temp_sensors.board_temp(), now)
-            self._client.publish('test',msg , qos=1)
+            msg = 'rpm={} temps={}, board={}'.format(rpm, temps, self._temp_sensors.board_temp())
+            self._client.publish('test', msg, qos=1)
 
             logger.info(msg)
             # Pace control loop per desired interval
@@ -74,6 +90,7 @@ class Agent:
             except KeyboardInterrupt:
                 self.terminate()
 
+        self._blower_fan.off()
         logger.info('Control loop terminated.')
 
 

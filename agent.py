@@ -57,9 +57,14 @@ class Agent:
         self._client.disconnect()
 
     def terminate(self):
+        # Caues the control loop to stop
         self._go = False
-        self._blower_fan.terminate()
+        # Turn off fan as precaution
+        self._blower_fan.off()
+        # And comms go.
         self._client.loop_stop()
+
+        # We are done with GPIOs.
         GPIO.cleanup()
 
     def _control_loop(self):
@@ -76,7 +81,7 @@ class Agent:
                 temp, status = self._temp_sensors.sensor_temp(sensor)
                 temps += '[{:.3f}, {}] '.format(temp, status)
 
-            self._blower_fan.set_duty_cycle(10)
+            self._blower_fan.set_duty_cycle(1)
             rpm = self._blower_fan.rpm()
 
             # Tick all parts of the system from here

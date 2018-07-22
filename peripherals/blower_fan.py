@@ -85,6 +85,7 @@ class BlowerFan:
         else:
             return True
 
+
 class RpmPulseCounter:
     """ Simple wrapper that counts pulses from the Fan's yellow wire to deduce RPM. """
 

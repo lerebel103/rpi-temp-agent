@@ -21,7 +21,7 @@ class Agent:
 
         self._config = AgentConfig()
         self._go = False
-        self._temp_sensors = Max31850Sensors(self._config.temperature_gpio)
+        self._temp_sensors = Max31850Sensors(self._config.temperature_gpio, self._config.temperature_sample_interval)
         self._blower_fan = BlowerFan(self._config.blower_fan_gpio_relay,
                                      self._config.blower_fan_gpio_pwm,
                                      self._config.blower_fan_gpio_rpm)
@@ -74,15 +74,18 @@ class Agent:
         logger.info('Running control loop.')
         pacer = Pacer()
         self._blower_fan.on()
+        self._temp_sensors.on()
         while self._go:
             now = time.time()
 
-            # Tick temp sensors
-            self._temp_sensors.tick(now)
+            # Read sensor temps
             temps = ''
             for sensor in self._temp_sensors.sensors:
                 temp, status = self._temp_sensors.sensor_temp(sensor)
-                temps += '[{:.3f}, {}] '.format(temp, status)
+                if temp is not None:
+                    temps += '[{:.3f}, {}] '.format(temp, status)
+                else:
+                    temps += '[--, {}] '.format(status)
 
             # Set fan duty cycle
             self._blower_fan.duty_cycle = 1
@@ -102,6 +105,7 @@ class Agent:
             except KeyboardInterrupt:
                 self.terminate()
 
+        self._temp_sensors.off()
         self._blower_fan.off()
         logger.info('Control loop terminated.')
 

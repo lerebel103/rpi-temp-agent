@@ -16,11 +16,10 @@ class AgentConfig:
     logger = LoggerConfig()
 
     temperature_gpio = 4
+    temperature_sample_interval = 0.75
 
     blower_fan_gpio_pwm = 12
-
     blower_fan_gpio_relay = 5
-
     blower_fan_gpio_rpm = 6
 
     control_loop_seconds = 1

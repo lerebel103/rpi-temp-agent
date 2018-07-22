@@ -7,7 +7,7 @@ import paho.mqtt.client as mqtt_client
 
 from config import AgentConfig
 from pacer import Pacer
-from sensors import TempSensors
+from sensors import Max31850Sensors
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class Agent:
     def __init__(self):
         self._config = AgentConfig()
         self._go = False
-        self._temp_sensors = TempSensors(self._config.temperature_gpio)
+        self._temp_sensors = Max31850Sensors(self._config.temperature_gpio)
 
         # Our MQTT client
         self._client = mqtt_client.Client()
@@ -60,7 +60,8 @@ class Agent:
             self._temp_sensors.tick(now)
             temps = ''
             for sensor in self._temp_sensors.sensors:
-                temps += '{:.3f} '.format( self._temp_sensors.sensor_temp(sensor) )
+                temp, status = self._temp_sensors.sensor_temp(sensor)
+                temps += '[{:.3f}, {}] '.format(temp, status)
 
             # Tick all parts of the system from here
             msg = 'temps={}, board={}, time={}'.format(temps, self._temp_sensors.board_temp(), now)

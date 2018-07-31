@@ -1,0 +1,28 @@
+{
+  "logger": {
+    "level": "INFO"
+  },
+  "mqtt": {
+    "client_id": null,
+    "broker_host": "raspberrypi.local",
+    "broker_port": 1883,
+    "root_topic": "bbq/"
+  },
+  "gpios": {
+    "temperature": 4,
+    "blower_fan_pwm": 18,
+    "blower_fan_relay": 5,
+    "blower_fan_rpm": 6
+  },
+  "controller": {
+    "blower_cycle_max": 30,
+    "P": 2,
+    "I": 0.01,
+    "D": 0.004,
+    "temperature_set_point": 124
+  },
+  "intervals": {
+    "control_loop_second": 1,
+    "temperature_second": 0.75
+  }
+}

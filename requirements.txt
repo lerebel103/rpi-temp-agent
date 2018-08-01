@@ -1,3 +1,4 @@
 paho-mqtt
 RPi.GPIO
-# -e git+ssh://git@github.com/danjperron/BitBangingDS18B20.git#egg=max31850_driver
+memoized
+-e git+ssh://git@github.com/lerebel103/BitBangingDS18B20.git#egg=ds18b20&subdirectory=python

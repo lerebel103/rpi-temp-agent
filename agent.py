@@ -8,6 +8,7 @@ import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt_client
 
 from controller import TempController
+from hardware_id import get_cpu_id
 from pacer import Pacer
 from peripherals.blower_fan import BlowerFan
 from peripherals.temperature_sensors import Max31850Sensors
@@ -22,16 +23,9 @@ class Agent:
             config = json.load(f)
         self._config = config
 
-        # Setup logger
-        root = logging.getLogger()
-        level = self._config['logger']['level']
-        root.setLevel(level)
-
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(level)
-        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-        ch.setFormatter(formatter)
-        root.addHandler(ch)
+        # Do logger
+        self._setup_logger()
+        logger.info('HardwareID={}'.format(get_cpu_id()))
 
         # GPIOs
         GPIO.setmode(GPIO.BCM)
@@ -48,6 +42,17 @@ class Agent:
 
         # IController
         self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client)
+
+    def _setup_logger(self):
+        # Setup logger
+        root = logging.getLogger()
+        level = self._config['logger']['level']
+        root.setLevel(level)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(level)
+        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+        ch.setFormatter(formatter)
+        root.addHandler(ch)
 
     def initialise(self):
         logger.info('Initialising.')

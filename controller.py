@@ -20,7 +20,6 @@ class TempController:
         self._temp_sensors.initialise()
         self._blower_fan.initisalise()
 
-
     def start(self):
         logger.info('Controller starting.')
         self._blower_fan.on()

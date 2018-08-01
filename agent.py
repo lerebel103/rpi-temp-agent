@@ -38,7 +38,7 @@ class Agent:
                                      self._config['gpios']['blower_fan_rpm'])
 
         # Our MQTT client
-        self._client = mqtt_client.Client()
+        self._client = mqtt_client.Client(client_id=get_cpu_id())
 
         # IController
         self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client)
@@ -74,17 +74,18 @@ class Agent:
     def run(self):
         self._go = True
         self._control_loop()
-        self._client.disconnect()
 
     def terminate(self):
         # Causes the control loop to stop
         self._go = False
-
-        # Terminates communications.
-        self._client.loop_stop()
+        self._controller.stop()
 
         # We are done with GPIOs.
         GPIO.cleanup()
+        # Terminates communications.
+        self._client.disconnect()
+        self._client.loop_stop()
+        logger.info('Control loop terminated.')
 
     def _control_loop(self):
         logger.info('Running control loop.')
@@ -99,10 +100,9 @@ class Agent:
                 try:
                     pacer.pace(now, self._config['intervals']['control_loop_second'])
                 except KeyboardInterrupt:
-                    self.terminate()
+                    self._go = False
         finally:
-            self._controller.stop()
-            logger.info('Control loop terminated.')
+            self.terminate()
 
     def _on_mqtt_message(self, client, userdata, message):
         pass

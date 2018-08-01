@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 import logging
+import socket
 import sys
 import time
 
@@ -58,16 +59,10 @@ class Agent:
         logger.info('Initialising.')
 
         # Connect to MQTT
+        self._client.on_connect = self.on_connect
         self._client.connect_async(host=self._config["mqtt"]["broker_host"],
                                    port=self._config["mqtt"]["broker_port"])
 
-        # Start control loop
-        self._client.on_message = self._on_mqtt_message
-
-        # subscribe to our control topics
-        self._client.subscribe(self._config['mqtt']['root_topic'] + 'controller')
-
-        self._client.loop_start()
         # Initialise controller
         self._controller.initialise()
 
@@ -84,7 +79,6 @@ class Agent:
         GPIO.cleanup()
         # Terminates communications.
         self._client.disconnect()
-        self._client.loop_stop()
         logger.info('Control loop terminated.')
 
     def _control_loop(self):
@@ -94,6 +88,17 @@ class Agent:
         try:
             while self._go:
                 now = time.time()
+
+                # Tick MQTT and make sure we have a connection
+                rc = self._client.loop(max_packets=128)
+                if mqtt_client.MQTT_ERR_NO_CONN <= rc <= mqtt_client.MQTT_ERR_CONN_LOST:
+                    try:
+                        socket.setdefaulttimeout(5)
+                        self._client.reconnect()
+                    except (socket.error, mqtt_client.WebsocketConnectionError):
+                        logger.debug('MQTT reconnect failed.')
+
+                # Tick controller
                 self._controller.tick(now)
 
                 # Pace control loop per desired interval
@@ -104,8 +109,15 @@ class Agent:
         finally:
             self.terminate()
 
-    def _on_mqtt_message(self, client, userdata, message):
-        pass
+    def on_connect(self, client, userdata, flags, rc):
+        logger.info('MQTT Connected with result code ' + str(rc))
+
+        # Subscribe to our control topics now that we have a connection
+        root_topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/#"
+        client.subscribe(root_topic, 0)
+
+    def on_disconnect(self, client, userdata, rc):
+        logger.info('MQTT Disonnected with result code ' + str(rc))
 
 
 if __name__ == "__main__":

@@ -11,6 +11,6 @@ def get_cpu_id():
     with open('/proc/cpuinfo', 'r') as f:
         for line in f:
             if line.startswith('Serial'):
-                cpu_serial = line.split(':')[1].strip(' ')
+                cpu_serial = line.split(':')[1].rstrip().lstrip()
                 break
     return cpu_serial

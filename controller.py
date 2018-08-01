@@ -1,5 +1,6 @@
 import logging
 
+from hardware_id import get_cpu_id
 from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 
@@ -19,6 +20,11 @@ class TempController:
         # Initialise peripherals
         self._temp_sensors.initialise()
         self._blower_fan.initisalise()
+
+        # Subscribe to topics
+        control_topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/command"
+        logger.info('controller topic is "{}"'.format(control_topic))
+        self._client.message_callback_add(control_topic, self._message)
 
     def start(self):
         logger.info('Controller starting.')
@@ -59,3 +65,8 @@ class TempController:
         self._client.publish('test', msg, qos=1)
 
         logger.info(msg)
+
+    def _message(self, mosq, obj, message):
+        payload = message.payload.decode("utf-8")
+        print(payload)
+

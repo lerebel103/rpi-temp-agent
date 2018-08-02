@@ -1,5 +1,6 @@
 import json
 import logging
+from json import JSONDecodeError
 
 from memoized import memoized
 
@@ -75,6 +76,13 @@ class TempController:
         root_topic = self.topic
         payload = message.payload.decode("utf-8")
         logger.info('Received config payload {}'.format(payload))
+
+        if len(payload) > 0:
+            try:
+                desired = json.loads(payload)
+                # Now merge
+            except JSONDecodeError as ex:
+                logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
 
         # Send config back as reply
         config = json.dumps(self._config['controller'])

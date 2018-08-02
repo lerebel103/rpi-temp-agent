@@ -154,7 +154,7 @@ class RpmPulseCounter:
             now = time()
             count = self._pulse_count
             self._rpm = (count - self._last_pulse_count) / (now - self._last_rpm_calc)
-            self._rpm = 60 * self._rpm / 2  # 2 pulses per rotation
+            self._rpm = int(60 * self._rpm / 2)  # 2 pulses per rotation
 
             self._last_rpm_calc = now
             self._last_pulse_count = count

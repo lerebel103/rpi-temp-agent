@@ -1,3 +1,4 @@
+import json
 import logging
 
 from hardware_id import get_cpu_id
@@ -22,9 +23,8 @@ class TempController:
         self._blower_fan.initisalise()
 
         # Subscribe to topics
-        control_topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/command"
-        logger.info('controller topic is "{}"'.format(control_topic))
-        self._client.message_callback_add(control_topic, self._message)
+        topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/config"
+        self._client.message_callback_add(topic, self._message_config)
 
     def start(self):
         logger.info('Controller starting.')
@@ -37,36 +37,34 @@ class TempController:
         logger.info('Controller stopped.')
 
     def tick(self, now):
-        # Read sensor temps
-        bbq_temp = None
-        temps = ''
-        for sensor in self._temp_sensors.sensors:
-            temp, status = self._temp_sensors.sensor_temp(sensor)
-            if temp is not None and status == Max31850Sensors.Status.OK:
-                bbq_temp = temp
-                temps += '[{:.3f}, {}] '.format(temp, status)
-            else:
-                bbq_temp = None
-                temps += '[--, {}] '.format(status)
+        root_topic = self._config['mqtt']['root_topic'] + get_cpu_id()
 
-        if bbq_temp is not None:
-            output = self._pid.update(now, bbq_temp)
-            # Set fan duty cycle
-            print(output)
-            self._blower_fan.duty_cycle = output
+        # Read sensor temps and publish
+        sensor = self._config['controller']['sensors_ids']['bbq']
+        bbq_temp = self._temp_sensors.sensor_temp(sensor)
 
+        sensor = self._config['controller']['sensors_ids']['food']
+        food_temp = self._temp_sensors.sensor_temp(sensor)
+
+        # Calculate duty cycle
+        duty_cycle = 0
+        if bbq_temp['status'] == Max31850Sensors.Status.OK:
+            duty_cycle = self._pid.update(now, bbq_temp['temp'])
+            duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
+            duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
+
+        # Set fan duty cycle and collect RPM
+        self._blower_fan.duty_cycle = duty_cycle
         rpm = self._blower_fan.rpm
+        healthy = self._blower_fan.is_healthy
 
-        if not self._blower_fan.is_healthy:
-            print("**************** FAN NOT SPINNING.")
+        # Publish data
+        self._client.publish(root_topic + "/food", json.dumps(food_temp))
+        self._client.publish(root_topic + "/bbq", json.dumps(bbq_temp))
+        self._client.publish(root_topic + "/fan", json.dumps({'duty_cycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
+        logger.info('bbq={}, food={}, rpm={}, duty={}'.format(bbq_temp, food_temp, rpm, duty_cycle))
 
-        # Tick all parts of the system from here
-        msg = 'rpm={} temps={}, board={}'.format(rpm, temps, self._temp_sensors.board_temp())
-        self._client.publish('test', msg, qos=1)
-
-        logger.info(msg)
-
-    def _message(self, mosq, obj, message):
+    def _message_config(self, mosq, obj, message):
         payload = message.payload.decode("utf-8")
         print(payload)
 

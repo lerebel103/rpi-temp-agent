@@ -1,7 +1,7 @@
 import logging
 import threading
 from time import time, sleep
-from enum import Enum
+from enum import Enum, IntEnum
 
 import DS18B20 as DS
 
@@ -13,7 +13,7 @@ class Max31850Sensors:
 
     """
 
-    class Status(Enum):
+    class Status(IntEnum):
         """ Records the state of each temp sensor. """
         UNKNOWN = -1,
         OK = 0,
@@ -69,7 +69,7 @@ class Max31850Sensors:
 
     def sensor_temp(self, sensor):
         """ \:returns Returns a tuple as (temp, status). """
-        return self._temps[sensor]['temp'], self._temps[sensor]['status'],
+        return self._temps[sensor]
 
     def board_temp(self):
         """ Single value if a board temp was available (status was ok).
@@ -104,7 +104,7 @@ class Max31850Sensors:
                 else:
                     # This is not good then, whatever the case is, we can't trust this temp
                     logger.debug('Sensor {} reports an error as {}'.format(sensor, status))
-                    self._temps[sensor]['temp'] = temps[0]  # This may be rubbish at this point
+                    self._temps[sensor]['temp'] = None
                     self._temps[sensor]['status'] = status
 
             # Now we can get the mean of our board temps.

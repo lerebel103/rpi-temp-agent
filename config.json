@@ -15,10 +15,15 @@
     "blower_fan_rpm": 6
   },
   "controller": {
-    "blower_cycle_max": 30,
+    "sensors_ids": {
+      "food": "3B-0CD8065D94D6",
+      "bbq": "3B-0CD8065DAB7B"
+    },
     "P": 2,
     "I": 0.01,
     "D": 0.004,
+    "blower_cycle_min": 1,
+    "blower_cycle_max": 30,
     "temperature_set_point": 124
   },
   "intervals": {

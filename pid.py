@@ -55,8 +55,6 @@ class PID:
         self._last_error = error
 
         output = self.p_term + (self.Ki * self.i_term) + (self.Kd * self.d_term)
-        output = max(output, 0)
-        output = min(output, 100)
         return output
 
     @property

@@ -25,7 +25,8 @@
     "blower_cycle_min": 1,
     "blower_cycle_max": 30,
     "temperature_set_point": 124,
-    "send_data_loop_count": 0
+    "send_data_loop_count": 0,
+    "state": "READY"
   },
   "intervals": {
     "control_loop_second": 1,

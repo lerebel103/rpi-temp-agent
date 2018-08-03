@@ -44,7 +44,7 @@ class BlowerFan:
             # Switch fan on
             GPIO.output(self._pin_relay, 1)
             self.is_on = True
-            logger.info('Blower Fan started.')
+            logger.info('Blower Fan switched on.')
 
     def off(self):
         """ Switches the fan off, stops PWM and stops monitoring RPM. """
@@ -57,7 +57,7 @@ class BlowerFan:
             # Switch pulse counter off
             self._pulse_counter.stop()
             self.is_on = False
-            logger.info('Blower Fan PWM stopped.')
+            logger.info('Blower Fan switched off.')
 
     @property
     def rpm(self):
@@ -108,14 +108,15 @@ class RpmPulseCounter:
         GPIO.setup(self._pin_rpm, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.add_event_detect(self._pin_rpm, GPIO.FALLING, self._sensed_rotation)
 
-        # A timer will continuously update rpm based on pulses received.
-        self._rpm_update_thread = threading.Timer(0, self._update_rpm_loop)
-        self._rpm_update_thread.daemon = True
         logger.info('Initialised RPM pulse counter on gpio {}'.format(self._pin_rpm))
 
     def start(self):
         """ Start counting pulses in a background thread. """
         if not self.is_on:
+            # A timer will continuously update rpm based on pulses received.
+            self._rpm_update_thread = threading.Timer(0, self._update_rpm_loop)
+            self._rpm_update_thread.name = 'RPM Pulse counter'
+            self._rpm_update_thread.daemon = True
             self.is_on = True
             self._rpm_update_thread.start()
             logger.info('Started RPM pulse counter on gpio {}'.format(self._pin_rpm))
@@ -159,3 +160,4 @@ class RpmPulseCounter:
             self._last_rpm_calc = now
             self._last_pulse_count = count
             sleep(1)  # 1 second resolution, plenty good.
+        self._rpm = 0

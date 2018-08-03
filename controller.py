@@ -1,5 +1,6 @@
 import json
 import logging
+from enum import IntEnum
 from json import JSONDecodeError
 
 from memoized import memoized
@@ -9,6 +10,12 @@ from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 
 logger = logging.getLogger(__name__)
+
+
+class State(IntEnum):
+    """ Records the state of each temp sensor. """
+    READY = 0,
+    ACTIVE = 1,
 
 
 class TempController:
@@ -30,10 +37,12 @@ class TempController:
         topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/config"
         self._client.message_callback_add(topic, self._message_config)
 
+        # Set pid params initially
+        self._update_pid_params()
+
     def start(self):
         logger.info('Controller starting.')
         self._send_loop_count = 0
-        self._blower_fan.on()
         self._temp_sensors.on()
 
     def stop(self):
@@ -49,20 +58,27 @@ class TempController:
         sensor = self._config['controller']['sensors_ids']['food']
         food_temp = self._temp_sensors.sensor_temp(sensor)
 
-        # Calculate duty cycle
-        duty_cycle = 0
-        if bbq_temp['status'] == Max31850Sensors.Status.OK:
-            duty_cycle = self._pid.update(now, bbq_temp['temp'])
-            duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
-            duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
-
-        # Set fan duty cycle and collect RPM
-        self._blower_fan.duty_cycle = duty_cycle
+        # Read fan state
         rpm = self._blower_fan.rpm
         healthy = self._blower_fan.is_healthy
 
+        # Calculate duty cycle
+        duty_cycle = 0
+        if self._config['controller']['state'] == State.ACTIVE:
+            if bbq_temp['status'] == Max31850Sensors.Status.OK:
+                duty_cycle = self._pid.update(now, bbq_temp['temp'])
+                duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
+                duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
+
+            # Set fan duty cycle and collect RPM
+            self._blower_fan.duty_cycle = duty_cycle
+            self._blower_fan.on()  # Always make sure fan is on
+        else:
+            self._blower_fan.off()  # Always make sure fan is off
+
         # Publish data
         if self._send_loop_count == 0:
+            self._client.publish(self.topic + "/board", json.dumps({'temp': self._temp_sensors.board_temp}))
             self._client.publish(self.topic + "/food", json.dumps(food_temp))
             self._client.publish(self.topic + "/bbq", json.dumps(bbq_temp))
             self._client.publish(self.topic + "/fan", json.dumps({'duty_cycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
@@ -80,7 +96,11 @@ class TempController:
         if len(payload) > 0:
             try:
                 desired = json.loads(payload)
+                # TODO We need to validate first, use schema validation
+
                 # Now merge
+                self._config['controller'] = {**self._config['controller'], **desired}
+                self._update_pid_params()
             except JSONDecodeError as ex:
                 logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
 
@@ -93,4 +113,11 @@ class TempController:
     def topic(self):
         root_topic = self._config['mqtt']['root_topic'] + get_cpu_id()
         return root_topic
+
+    def _update_pid_params(self):
+        self._pid.Kp = self._config['controller']['P']
+        self._pid.Ki = self._config['controller']['I']
+        self._pid.Kd = self._config['controller']['D']
+        self._pid.set_point = self._config['controller']['temperature_set_point']
+
 

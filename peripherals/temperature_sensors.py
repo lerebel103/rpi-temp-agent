@@ -71,6 +71,7 @@ class Max31850Sensors:
         """ \:returns Returns a tuple as (temp, status). """
         return self._temps[sensor]
 
+    @property
     def board_temp(self):
         """ Single value if a board temp was available (status was ok).
 

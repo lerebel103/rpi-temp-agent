@@ -1,0 +1,9 @@
+{
+    "bbq": {
+        "set_point": 114
+    },
+    "food": {
+        "set_point": 60
+    },
+    "mode": 1
+}

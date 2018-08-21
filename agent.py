@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class Agent:
     def __init__(self):
         # Load configuration
-        with open('config.json') as f:
+        with open('config/config.json') as f:
             config = json.load(f)
         self._config = config
 
@@ -32,9 +32,7 @@ class Agent:
 
         self._go = False
         self._temp_sensors = Max31850Sensors(self._config['temperature'])
-        self._blower_fan = BlowerFan(self._config['gpios']['blower_fan_relay'],
-                                     self._config['gpios']['blower_fan_pwm'],
-                                     self._config['gpios']['blower_fan_rpm'])
+        self._blower_fan = BlowerFan(self._config['fan'])
 
         # Our MQTT client
         self._client = mqtt_client.Client(client_id=get_cpu_id())

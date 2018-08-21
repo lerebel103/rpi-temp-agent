@@ -1,0 +1,42 @@
+{
+    "controller": {
+        "D": 5,
+        "I": 0.02,
+        "P": 5,
+        "blower_cycle_max": 70,
+        "blower_cycle_min": 7,
+        "send_data_loop_count": 0
+    },
+    "fan": {
+        "pwm_gpio": 18,
+        "relay_gpio": 5,
+        "rpm_gpio": 6
+    },
+    "intervals": {
+        "control_loop_second": 1
+    },
+    "logger": {
+        "level": "INFO"
+    },
+    "mqtt": {
+        "broker_host": "raspberrypi.local",
+        "broker_port": 1883,
+        "client_id": null,
+        "root_topic": "bbq/"
+    },
+    "temperature": {
+        "bbq": {
+            "id": "3B-0CD8065DAB7B",
+            "temperature_offset": 0
+        },
+        "board": {
+            "temperature_offset": 0
+        },
+        "food": {
+            "id": "3B-0CD8065D94D6",
+            "temperature_offset": 0
+        },
+        "gpio": 4,
+        "sampling_seconds": 0.75
+    }
+}

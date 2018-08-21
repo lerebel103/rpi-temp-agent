@@ -12,7 +12,7 @@ from pid import PID
 logger = logging.getLogger(__name__)
 
 
-class State(IntEnum):
+class Mode(IntEnum):
     """ Records the state of each temp sensor. """
     READY = 0,
     ACTIVE = 1,
@@ -28,6 +28,11 @@ class TempController:
         self._blower_fan = blower_fan
         self._send_loop_count = 0
 
+        # Load dynamic state configuration
+        with open('config/state.json') as f:
+            state = json.load(f)
+        self._state = state
+
     def initialise(self):
         # Initialise peripherals
         self._temp_sensors.initialise()
@@ -36,6 +41,10 @@ class TempController:
         # Subscribe to topics
         topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/config/desired"
         self._client.message_callback_add(topic, self._message_config)
+
+        # Subscribe to topics
+        topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/state/desired"
+        self._client.message_callback_add(topic, self._message_state)
 
         # Set pid params initially
         self._update_pid_params()
@@ -61,7 +70,7 @@ class TempController:
 
         # Calculate duty cycle
         duty_cycle = 0
-        if self._config['controller']['state'] == State.ACTIVE:
+        if self._state['mode'] == Mode.ACTIVE:
             if bbq_temp['status'] == Max31850Sensors.Status.OK:
                 duty_cycle = self._pid.update(now, bbq_temp['temp'])
                 duty_cycle += self._config['controller']['blower_cycle_min']
@@ -99,12 +108,40 @@ class TempController:
                 # Now merge
                 self._config['controller'] = {**self._config['controller'], **desired}
                 self._update_pid_params()
+
+                # Save config
+                with open('config/config.json', 'w') as f:
+                    json.dump(self._config, f, indent=4, sort_keys=True)
             except JSONDecodeError as ex:
                 logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
 
         # Send config back as reply
         config = json.dumps(self._config['controller'])
         self._client.publish(root_topic + "/controller/config/reported", config)
+
+    def _message_state(self, mosq, obj, message):
+        root_topic = self.topic
+        payload = message.payload.decode("utf-8")
+        logger.info('Received state payload {}'.format(payload))
+
+        if len(payload) > 0:
+            try:
+                desired = json.loads(payload)
+                # TODO We need to validate first, use schema validation
+
+                # Now merge
+                self._state = {**self._state, **desired}
+                self._update_pid_params()
+
+                # Save state
+                with open('config/state.json', 'w') as f:
+                    json.dump(self._state, f, indent=4, sort_keys=True)
+            except JSONDecodeError as ex:
+                logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
+
+        # Send state back as reply
+        state = json.dumps(self._state)
+        self._client.publish(root_topic + "/controller/state/reported", state)
 
     @property
     @memoized
@@ -116,4 +153,4 @@ class TempController:
         self._pid.Kp = self._config['controller']['P']
         self._pid.Ki = self._config['controller']['I']
         self._pid.Kd = self._config['controller']['D']
-        self._pid.set_point = self._config['controller']['temperature_set_point']
+        self._pid.set_point = self._state['bbq']['set_point']

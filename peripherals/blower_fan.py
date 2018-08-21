@@ -10,24 +10,23 @@ logger = logging.getLogger(__name__)
 class BlowerFan:
     """ Controls the Blower fan by using PWM. """
 
-    def __init__(self, gpio_pin_relay, gpio_pin_pwm, gpio_pin_rpm):
-        self._pin_pwm = gpio_pin_pwm
-        self._pin_relay = gpio_pin_relay
+    def __init__(self, config):
+        self._config = config
         self._pwm_freq = 70000 / 256  # Hz
         self._pwm = None
         self._duty_cycle = 0
         self.is_on = False
-        self._pulse_counter = RpmPulseCounter(gpio_pin_rpm)
+        self._pulse_counter = RpmPulseCounter(self._config['rpm_gpio'])
 
     def initisalise(self):
-        logger.info('Initialising Blower Fan on gpio {}'.format(self._pin_pwm))
+        logger.info('Initialising Blower Fan on gpio {}'.format(self._config['pwm_gpio']))
 
         # PWM pin
-        GPIO.setup(self._pin_pwm, GPIO.OUT)
-        self._pwm = GPIO.PWM(self._pin_pwm, self._pwm_freq)
+        GPIO.setup(self._config['pwm_gpio'], GPIO.OUT)
+        self._pwm = GPIO.PWM(self._config['pwm_gpio'], self._pwm_freq)
 
         # ON/OFF Relay
-        GPIO.setup(self._pin_relay, GPIO.OUT)
+        GPIO.setup(self._config['relay_gpio'], GPIO.OUT)
 
         # RPM handler
         self._pulse_counter.initialise()
@@ -42,7 +41,7 @@ class BlowerFan:
             # Start PWM
             self._pwm.start(self.duty_cycle)
             # Switch fan on
-            GPIO.output(self._pin_relay, 1)
+            GPIO.output(self._config['relay_gpio'], 1)
             self.is_on = True
             logger.info('Blower Fan switched on.')
 
@@ -50,7 +49,7 @@ class BlowerFan:
         """ Switches the fan off, stops PWM and stops monitoring RPM. """
         if self.is_on:
             # Switch fan off
-            GPIO.output(self._pin_relay, 0)
+            GPIO.output(self._config['relay_gpio'], 0)
             # Switch PWM off
             self.duty_cycle = 0
             self._pwm.stop()
@@ -89,12 +88,12 @@ class BlowerFan:
 class RpmPulseCounter:
     """ Simple wrapper that counts pulses from the Fan's yellow wire to deduce RPM. """
 
-    def __init__(self, gpio_pin_rpm):
+    def __init__(self, pin_rpm):
         """ Creates this instance by binding it to a pin.
 
-        \:param gpio_pin_rpm: Input pin to which the fan Sensor wire is connected.
+        \:param self._config['rpm_gpio']: Input pin to which the fan Sensor wire is connected.
         """
-        self._pin_rpm = gpio_pin_rpm
+        self._pin_rpm = pin_rpm
         self.is_on = False
         self._rpm_update_thread = None
         self._reset_rpm()

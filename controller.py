@@ -34,7 +34,7 @@ class TempController:
         self._blower_fan.initisalise()
 
         # Subscribe to topics
-        topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/config"
+        topic = self._config['mqtt']['root_topic'] + get_cpu_id() + "/controller/config/desired"
         self._client.message_callback_add(topic, self._message_config)
 
         # Set pid params initially
@@ -52,11 +52,11 @@ class TempController:
 
     def tick(self, now):
         # Read sensor temps and publish
-        sensor = self._config['controller']['sensors_ids']['bbq']
-        bbq_temp = self._temp_sensors.sensor_temp(sensor)
+        sensor_config = self._config['controller']['sensors']['bbq']
+        bbq_temp = self._temp_sensors.sensor_temp(sensor_config)
 
-        sensor = self._config['controller']['sensors_ids']['food']
-        food_temp = self._temp_sensors.sensor_temp(sensor)
+        sensor_config = self._config['controller']['sensors']['food']
+        food_temp = self._temp_sensors.sensor_temp(sensor_config)
 
         # Read fan state
         rpm = self._blower_fan.rpm
@@ -67,6 +67,7 @@ class TempController:
         if self._config['controller']['state'] == State.ACTIVE:
             if bbq_temp['status'] == Max31850Sensors.Status.OK:
                 duty_cycle = self._pid.update(now, bbq_temp['temp'])
+                duty_cycle += self._config['controller']['blower_cycle_min']
                 duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
                 duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
 
@@ -78,9 +79,9 @@ class TempController:
 
         # Publish data
         if self._send_loop_count == 0:
-            self._client.publish(self.topic + "/board", json.dumps({'temp': self._temp_sensors.board_temp}))
-            self._client.publish(self.topic + "/food", json.dumps(food_temp))
-            self._client.publish(self.topic + "/bbq", json.dumps(bbq_temp))
+            self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
+            self._client.publish(self.topic + "/temperature/food", json.dumps(food_temp))
+            self._client.publish(self.topic + "/temperature/bbq", json.dumps(bbq_temp))
             self._client.publish(self.topic + "/fan", json.dumps({'duty_cycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
             logger.debug('bbq={}, food={}, rpm={}, duty={}'.format(bbq_temp, food_temp, rpm, duty_cycle))
 
@@ -106,7 +107,7 @@ class TempController:
 
         # Send config back as reply
         config = json.dumps(self._config['controller'])
-        self._client.publish(root_topic + "/food", config)
+        self._client.publish(root_topic + "/controller/config/reported", config)
 
     @property
     @memoized
@@ -119,5 +120,3 @@ class TempController:
         self._pid.Ki = self._config['controller']['I']
         self._pid.Kd = self._config['controller']['D']
         self._pid.set_point = self._config['controller']['temperature_set_point']
-
-

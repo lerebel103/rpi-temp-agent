@@ -2,6 +2,7 @@ import logging
 import threading
 from time import time, sleep
 from enum import Enum, IntEnum
+from copy import deepcopy
 
 import DS18B20 as DS
 
@@ -67,9 +68,12 @@ class Max31850Sensors:
         """ \:returns List of sensors discovered by the system. """
         return self._sensors
 
-    def sensor_temp(self, sensor):
+    def sensor_temp(self, sensor_conf):
         """ \:returns Returns a tuple as (temp, status). """
-        return self._temps[sensor]
+        sensor_info = deepcopy(self._temps[sensor_conf['id']])
+        if sensor_info['temp'] is not None:
+            sensor_info['temp'] = sensor_info['temp'] + sensor_conf['temperature_offset']
+        return sensor_info
 
     @property
     def board_temp(self):
@@ -91,6 +95,7 @@ class Max31850Sensors:
 
             # We can average out the board temperature for this device, nice indicator.
             board_temps = 0
+            count_board_ok = 0
             for sensor in self._sensors:
                 temps = DS.readMax31850(False, self._pin_1wire, sensor)
 
@@ -102,6 +107,7 @@ class Max31850Sensors:
                     self._temps[sensor]['temp'] = temps[0]
                     self._temps[sensor]['status'] = status
                     board_temps += temps[1]
+                    count_board_ok += 1
                 else:
                     # This is not good then, whatever the case is, we can't trust this temp
                     logger.debug('Sensor {} reports an error as {}'.format(sensor, status))
@@ -109,8 +115,8 @@ class Max31850Sensors:
                     self._temps[sensor]['status'] = status
 
             # Now we can get the mean of our board temps.
-            if len(self._sensors) > 0:
-                self._board_temp = board_temps / len(self._sensors)
+            if count_board_ok > 0:
+                self._board_temp = board_temps / count_board_ok
 
     @staticmethod
     def _do_status(temps):

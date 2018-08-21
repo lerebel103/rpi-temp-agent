@@ -13,7 +13,7 @@ class BlowerFan:
     def __init__(self, gpio_pin_relay, gpio_pin_pwm, gpio_pin_rpm):
         self._pin_pwm = gpio_pin_pwm
         self._pin_relay = gpio_pin_relay
-        self._pwm_freq = 1600  # Hz
+        self._pwm_freq = 70000 / 256  # Hz
         self._pwm = None
         self._duty_cycle = 0
         self.is_on = False
@@ -143,10 +143,9 @@ class RpmPulseCounter:
     def _sensed_rotation(self, pin):
         """ Called back with pin for which the event occured. """
         now = time()
-        # Filter out spurious pulses (good for 5,000 RPM with this check)
         if now - self._last_pulse_time > 0.001:
             self._pulse_count += 1
-        self._last_pulse_time = now
+            self._last_pulse_time = now
 
     def _update_rpm_loop(self):
         """ Continuously runs at regular intervals to update the effective RPM value."""

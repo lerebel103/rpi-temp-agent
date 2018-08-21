@@ -31,8 +31,7 @@ class Agent:
         GPIO.setmode(GPIO.BCM)
 
         self._go = False
-        self._temp_sensors = Max31850Sensors(self._config['gpios']['temperature'],
-                                             self._config['intervals']['temperature_second'])
+        self._temp_sensors = Max31850Sensors(self._config['temperature'])
         self._blower_fan = BlowerFan(self._config['gpios']['blower_fan_relay'],
                                      self._config['gpios']['blower_fan_pwm'],
                                      self._config['gpios']['blower_fan_rpm'])

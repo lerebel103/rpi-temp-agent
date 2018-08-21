@@ -22,13 +22,12 @@ class Max31850Sensors:
         SHORT_TO_GROUND = 2,
         SHORT_TO_VDD = 4
 
-    def __init__(self, gpio_pin, temp_sample_interval):
+    def __init__(self, config):
         """ We need to bind this instance to a specific 1-wire gpio, as given to this class.
 
         :param gpio_pin: GPIO pin to which the Max31850 data ports are attached.
         """
-        self._pin_1wire = gpio_pin
-        self._temp_sample_interval = temp_sample_interval
+        self._config = config
         self.is_on = False
         self._sensors = None
         self._board_temp = None
@@ -38,7 +37,7 @@ class Max31850Sensors:
     def initialise(self):
         self.off()
 
-        self._sensors = DS.scan(self._pin_1wire)
+        self._sensors = DS.scan(self._config['gpio'])
         logger.info('Found temperature sensors with ids {}'.format(self._sensors))
 
         # Preload reading with initial state.
@@ -47,33 +46,38 @@ class Max31850Sensors:
 
         self._update_thread = threading.Timer(0, self._update_loop)
         self._update_thread.daemon = True
-        logger.info('Initialised Temperature sensors on gpio {}'.format(self._pin_1wire))
+        logger.info('Initialised Temperature sensors on gpio {}'.format(self._config['gpio']))
 
     def on(self):
         """ Start temperature reading in a background thread. """
         if not self.is_on:
             self.is_on = True
             self._update_thread.start()
-            logger.info('Started Temperature reading on gpio {}'.format(self._pin_1wire))
+            logger.info('Started Temperature reading on gpio {}'.format(self._config['gpio']))
 
     def off(self):
         """ Stop temperature reading in a background thread. """
         if self.is_on:
             self._update_thread.cancel()
             self.is_on = False
-            logger.info('Stopped Temperature reading on gpio {}'.format(self._pin_1wire))
+            logger.info('Stopped Temperature reading on gpio {}'.format(self._config['gpio']))
 
     @property
     def sensors(self):
         """ \:returns List of sensors discovered by the system. """
         return self._sensors
 
-    def sensor_temp(self, sensor_conf):
-        """ \:returns Returns a tuple as (temp, status). """
-        sensor_info = deepcopy(self._temps[sensor_conf['id']])
-        if sensor_info['temp'] is not None:
-            sensor_info['temp'] = sensor_info['temp'] + sensor_conf['temperature_offset']
-        return sensor_info
+    @property
+    def food_temp(self):
+        """ \:returns Returns a tuple as (temp, status) for food. """
+        conf = self._config['food']
+        return self._get_temp(conf)
+
+    @property
+    def bbq_temp(self):
+        """ \:returns Returns a tuple as (temp, status) for bbq. """
+        conf = self._config['bbq']
+        return self._get_temp(conf)
 
     @property
     def board_temp(self):
@@ -81,23 +85,32 @@ class Max31850Sensors:
 
         \:returns Single value for board temperature, or None.
         """
-        return self._board_temp
+        if self._board_temp is not None:
+            return self._board_temp + self._config['board']['temperature_offset']
+        else:
+            return None
+
+    def _get_temp(self, conf):
+        sensor_info = deepcopy(self._temps[conf['id']])
+        if sensor_info['temp'] is not None:
+            sensor_info['temp'] = sensor_info['temp'] + conf['temperature_offset']
+        return sensor_info
 
     def _update_loop(self):
         """ Continue to read temps in a loop until asked to stop. """
         while self.is_on:
             # Start the conversion for the next loop
-            logger.debug('Start Conversion on pin {}'.format(self._pin_1wire))
-            DS.pinsStartConversion([self._pin_1wire])
+            logger.debug('Start Conversion on pin {}'.format(self._config['gpio']))
+            DS.pinsStartConversion([self._config['gpio']])
 
             # Requires sleep for samples to appear
-            sleep(self._temp_sample_interval)
+            sleep(self._config['sampling_seconds'])
 
             # We can average out the board temperature for this device, nice indicator.
             board_temps = 0
             count_board_ok = 0
             for sensor in self._sensors:
-                temps = DS.readMax31850(False, self._pin_1wire, sensor)
+                temps = DS.readMax31850(False, self._config['gpio'], sensor)
 
                 # First we get our status, as we need to decide if this reading is going to be valid.
                 status = self._do_status(temps)

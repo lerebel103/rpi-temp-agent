@@ -52,11 +52,8 @@ class TempController:
 
     def tick(self, now):
         # Read sensor temps and publish
-        sensor_config = self._config['controller']['sensors']['bbq']
-        bbq_temp = self._temp_sensors.sensor_temp(sensor_config)
-
-        sensor_config = self._config['controller']['sensors']['food']
-        food_temp = self._temp_sensors.sensor_temp(sensor_config)
+        bbq_temp = self._temp_sensors.bbq_temp
+        food_temp = self._temp_sensors.food_temp
 
         # Read fan state
         rpm = self._blower_fan.rpm

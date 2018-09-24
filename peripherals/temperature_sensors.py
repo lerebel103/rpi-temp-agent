@@ -91,10 +91,13 @@ class Max31850Sensors:
             return None
 
     def _get_temp(self, conf):
-        sensor_info = deepcopy(self._temps[conf['id']])
-        if sensor_info['temp'] is not None:
-            sensor_info['temp'] = sensor_info['temp'] + conf['temperature_offset']
-        return sensor_info
+        if conf['id'] in self._temps:
+            sensor_info = deepcopy(self._temps[conf['id']])
+            if sensor_info['temp'] is not None:
+                sensor_info['temp'] = sensor_info['temp'] + conf['temperature_offset']
+            return sensor_info
+        else:
+            return {'temp': None, 'status': Max31850Sensors.Status.UNKNOWN}
 
     def _update_loop(self):
         """ Continue to read temps in a loop until asked to stop. """
@@ -111,9 +114,12 @@ class Max31850Sensors:
             count_board_ok = 0
             for sensor in self._sensors:
                 temps = DS.readMax31850(False, self._config['gpio'], sensor)
+                print(sensor, temps)
+                if temps is None:
+                    continue
 
                 # First we get our status, as we need to decide if this reading is going to be valid.
-                status = self._do_status(temps)
+                status = self._do_status(temps, sensor)
                 if status == Max31850Sensors.Status.OK:
                     # Good, then we get the temperature reported by the 1-wire device
                     logger.debug('Sensor {} reports a valid temperature as {}'.format(sensor, temps[0]))
@@ -132,7 +138,7 @@ class Max31850Sensors:
                 self._board_temp = board_temps / count_board_ok
 
     @staticmethod
-    def _do_status(temps):
+    def _do_status(temps, sensor):
         """ Work out the status of this sensor. """
         flags = temps[2]
         if flags == 0:
@@ -142,7 +148,9 @@ class Max31850Sensors:
             return Max31850Sensors.Status.OPEN_CIRCUIT
         elif flags & 4:
             # Short to ground
-            return Max31850Sensors.Status.SHORT_TO_GROUND
+            # return Max31850Sensors.Status.SHORT_TO_GROUND
+            print("short in {}".format(sensor))
+            return Max31850Sensors.Status.OK
         elif flags & 8:
             # Short to VDD
             return Max31850Sensors.Status.SHORT_TO_VDD

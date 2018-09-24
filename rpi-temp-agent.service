@@ -1,0 +1,15 @@
+[Unit]
+Description=BBQ Temp agent
+After=network.target auditd.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/rpi-temp-agent
+ExecStart=/home/pi/rpi-temp-agent/bin/service.sh
+PIDFile=/tmp/rpi-temp-agent.pid
+Restart=always
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+Alias=rpi-temp-agent.service

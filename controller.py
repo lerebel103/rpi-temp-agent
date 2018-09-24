@@ -63,7 +63,8 @@ class TempController:
         # Read sensor temps and publish
         bbq_temp = self._temp_sensors.bbq_temp
         food_temp = self._temp_sensors.food_temp
-
+ 
+      
         # Read fan state
         rpm = self._blower_fan.rpm
         healthy = self._blower_fan.is_healthy
@@ -85,6 +86,7 @@ class TempController:
 
         # Publish data
         if self._send_loop_count == 0:
+            print(self.topic + "/temperature/board")
             self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
             self._client.publish(self.topic + "/temperature/food", json.dumps(food_temp))
             self._client.publish(self.topic + "/temperature/bbq", json.dumps(bbq_temp))
@@ -112,12 +114,16 @@ class TempController:
                 # Save config
                 with open('config/config.json', 'w') as f:
                     json.dump(self._config, f, indent=4, sort_keys=True)
+
+                # Send config back as reply
+                config = json.dumps(self._config['controller'])
+                self._client.publish(root_topic + "/controller/config/reported", config)
             except JSONDecodeError as ex:
                 logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
-
-        # Send config back as reply
-        config = json.dumps(self._config['controller'])
-        self._client.publish(root_topic + "/controller/config/reported", config)
+        else:
+            # Send config back as reply
+            config = json.dumps(self._config['controller'])
+            self._client.publish(root_topic + "/controller/config/reported", config)
 
     def _message_state(self, mosq, obj, message):
         root_topic = self.topic
@@ -136,12 +142,16 @@ class TempController:
                 # Save state
                 with open('config/state.json', 'w') as f:
                     json.dump(self._state, f, indent=4, sort_keys=True)
+                # Send state back as reply
+                state = json.dumps(self._state)
+                self._client.publish(root_topic + "/controller/state/reported", state)
+
             except JSONDecodeError as ex:
                 logger.error("Inbound payload isn't JSON: {}".format(ex.msg))
-
-        # Send state back as reply
-        state = json.dumps(self._state)
-        self._client.publish(root_topic + "/controller/state/reported", state)
+        else:
+            # Send state back as reply
+            state = json.dumps(self._state)
+            self._client.publish(root_topic + "/controller/state/reported", state)
 
     @property
     @memoized

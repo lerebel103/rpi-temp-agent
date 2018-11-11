@@ -62,7 +62,9 @@ class TempController:
     def tick(self, now):
         # Read sensor temps and publish
         bbq_temp = self._temp_sensors.bbq_temp
-        food_temp = self._temp_sensors.food_temp
+        food1_temp = self._temp_sensors.food_temp
+        # TODO
+        food2_temp = self._temp_sensors.food_temp
  
       
         # Read fan state
@@ -88,10 +90,11 @@ class TempController:
         if self._send_loop_count == 0:
             print(self.topic + "/temperature/board")
             self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
-            self._client.publish(self.topic + "/temperature/food", json.dumps(food_temp))
-            self._client.publish(self.topic + "/temperature/bbq", json.dumps(bbq_temp))
-            self._client.publish(self.topic + "/fan", json.dumps({'duty_cycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
-            logger.debug('bbq={}, food={}, rpm={}, duty={}'.format(bbq_temp, food_temp, rpm, duty_cycle))
+            self._client.publish(self.topic + "/temperature/probe1", json.dumps(food1_temp))
+            self._client.publish(self.topic + "/temperature/probe2", json.dumps(food2_temp))
+            self._client.publish(self.topic + "/temperature/pit", json.dumps(bbq_temp))
+            self._client.publish(self.topic + "/fan", json.dumps({'dutyCycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
+            logger.debug('bbq={}, food={}, rpm={}, duty={}'.format(bbq_temp, food1_temp, rpm, duty_cycle))
 
         self._send_loop_count += 1
         if self._send_loop_count > self._config['controller']['send_data_loop_count']:

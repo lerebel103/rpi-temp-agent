@@ -68,15 +68,21 @@ class Max31850Sensors:
         return self._sensors
 
     @property
-    def food_temp(self):
-        """ \:returns Returns a tuple as (temp, status) for food. """
-        conf = self._config['food']
+    def probe1_temp(self):
+        """ \:returns Returns a tuple as (temp, status) for probe1. """
+        conf = self._config['probe1']
         return self._get_temp(conf)
 
     @property
-    def bbq_temp(self):
+    def probe2_temp(self):
+        """ \:returns Returns a tuple as (temp, status) for probe2. """
+        conf = self._config['probe2']
+        return self._get_temp(conf)
+
+    @property
+    def pit_temp(self):
         """ \:returns Returns a tuple as (temp, status) for bbq. """
-        conf = self._config['bbq']
+        conf = self._config['pit']
         return self._get_temp(conf)
 
     @property
@@ -114,7 +120,6 @@ class Max31850Sensors:
             count_board_ok = 0
             for sensor in self._sensors:
                 temps = DS.readMax31850(False, self._config['gpio'], sensor)
-                print(sensor, temps)
                 if temps is None:
                     continue
 
@@ -149,7 +154,6 @@ class Max31850Sensors:
         elif flags & 4:
             # Short to ground
             # return Max31850Sensors.Status.SHORT_TO_GROUND
-            print("short in {}".format(sensor))
             return Max31850Sensors.Status.OK
         elif flags & 8:
             # Short to VDD

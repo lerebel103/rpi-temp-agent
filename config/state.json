@@ -1,9 +1,12 @@
 {
-    "bbq": {
-        "set_point": 140
+    "mode": 1,
+    "pit": {
+        "setPoint": 51
     },
-    "food": {
-        "set_point": 60
+    "probe1": {
+        "setPoint": 51
     },
-    "mode": 1
+    "probe2": {
+        "setPoint": 54
+    }
 }

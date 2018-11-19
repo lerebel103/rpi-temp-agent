@@ -25,14 +25,18 @@
         "root_topic": "bbq/"
     },
     "temperature": {
-        "bbq": {
+        "pit": {
             "id": "3B-0CD8065D94D6",
             "temperature_offset": 0
         },
         "board": {
             "temperature_offset": 0
         },
-        "food": {
+        "probe1": {
+            "id": "3B-0CD8065DAB7B",
+            "temperature_offset": 0
+        },
+        "probe2": {
             "id": "3B-0CD8065DAB7B",
             "temperature_offset": 0
         },

@@ -1,9 +1,9 @@
 import sqlite3
 import logging
 from datetime import datetime, timedelta
+import time
 
 logger = logging.getLogger(__name__)
-
 
 sensor_schema="""
 CREATE TABLE IF NOT EXISTS sensor_data (
@@ -25,6 +25,7 @@ class DataLogger:
         self.source_id = source_id
         self.conn = sqlite3.connect(sqlite_file)
         self._check_schema()
+        self._last_trim_datetime = None
 
     def _check_schema(self):
         logger.info('Setting Data Logger');
@@ -41,13 +42,20 @@ class DataLogger:
             c.execute("INSERT INTO sensor_data (timestamp, source_id, sensor_name, temp, status) VALUES ({}, '{}', '{}', {}, '{}')".\
                     format(timestamp, self.source_id, name, temp, data['status']))
         self.conn.commit()
-        self.trim()
+
+        # Delete old entries periodically
+        now = datetime.now()
+        threshold = now - timedelta(hours=RETENTION_HOURS)
+        if self._last_trim_datetime == None or threshold > self._last_trim_datetime:
+            self.trim()
+            self._last_trim_datetime = now
 
     def trim(self):
+        logger.debug('Trimming data logger entries');
         c = self.conn.cursor()
         now = datetime.now()
         since = now - timedelta(hours=RETENTION_HOURS)
-        print(since)
-        c.execute('DELETE FROM sensor_data WHERE timestamp < {});'.format(since.epoch()))
+        epoch = time.mktime(since.timetuple())
+        c.execute('DELETE FROM sensor_data WHERE timestamp < {};'.format(epoch))
         self.conn.commit()
 

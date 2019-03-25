@@ -40,7 +40,7 @@ class Agent:
         self._client = mqtt_client.Client(client_id=get_cpu_id())
 
         # Data logger
-        self._data_logger = DataLogger(config['data_logger']['path'])
+        self._data_logger = DataLogger(config['data_logger']['path'], get_cpu_id())
 
         # IController
         self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client, self._data_logger)

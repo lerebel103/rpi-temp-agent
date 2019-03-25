@@ -18,6 +18,9 @@
     "logger": {
         "level": "INFO"
     },
+    "data_logger": {
+        "path": "/tmp/bbqpi-logger.sqlite"
+    },
     "mqtt": {
         "broker_host": "127.0.0.1",
         "broker_port": 1883,

@@ -20,9 +20,10 @@ class Mode(IntEnum):
 
 class TempController:
 
-    def __init__(self, config, sensors, blower_fan, client):
+    def __init__(self, config, sensors, blower_fan, client, data_logger):
         self._config = config
         self._client = client
+        self._data_logger = data_logger
         self._pid = PID()
         self._temp_sensors = sensors
         self._blower_fan = blower_fan
@@ -96,6 +97,14 @@ class TempController:
             self._client.publish(self.topic + "/temperature/pit", json.dumps(pit_temp))
             self._client.publish(self.topic + "/fan", json.dumps({'dutyCycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
             logger.debug('pit={}, probe={}, rpm={}, duty={}'.format(pit_temp, probe1_temp, rpm, duty_cycle))
+
+            temps=[
+                    ('probe1', probe1_temp),
+                    ('probe2', probe2_temp),
+                    ('pit', pit_temp),
+                    ('board', {'temp': self._temp_sensors.board_temp, 'status': 'OK'})
+            ]
+            self._data_logger.log_sensors(temps)
 
         self._send_loop_count += 1
         if self._send_loop_count > self._config['controller']['send_data_loop_count']:

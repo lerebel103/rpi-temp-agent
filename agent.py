@@ -13,6 +13,8 @@ from pacer import Pacer
 from peripherals.blower_fan import BlowerFan
 from peripherals.temperature_sensors import Max31850Sensors
 
+from db.data_logger import DataLogger
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,8 +39,11 @@ class Agent:
         # Our MQTT client
         self._client = mqtt_client.Client(client_id=get_cpu_id())
 
+        # Data logger
+        self._data_logger = DataLogger(config['data_logger']['path'])
+
         # IController
-        self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client)
+        self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client, self._data_logger)
 
     def _setup_logger(self):
         # Setup logger

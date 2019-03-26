@@ -5,7 +5,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-sensor_schema="""
+sensor_schema = """
 CREATE TABLE IF NOT EXISTS sensor_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TIMESTAMP,
@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_sensor_timestamp ON sensor_data (timestamp);
 """
 
 RETENTION_HOURS = 48
+
 
 class DataLogger:
     def __init__(self, sqlite_file, source_id):
@@ -39,14 +40,15 @@ class DataLogger:
             temp = data['temp']
             if temp is None:
                 temp = -1
-            c.execute("INSERT INTO sensor_data (timestamp, source_id, sensor_name, temp, status) VALUES ({}, '{}', '{}', {}, '{}')".\
-                    format(timestamp, self.source_id, name, temp, data['status']))
+            c.execute(
+                "INSERT INTO sensor_data (timestamp, source_id, sensor_name, temp, status) VALUES ({}, '{}', '{}', {}, '{}')". \
+                format(timestamp, self.source_id, name, temp, data['status']))
         self.conn.commit()
 
         # Delete old entries periodically
         now = datetime.now()
         threshold = now - timedelta(hours=RETENTION_HOURS)
-        if self._last_trim_datetime == None or threshold > self._last_trim_datetime:
+        if self._last_trim_datetime is None or threshold > self._last_trim_datetime:
             self.trim()
             self._last_trim_datetime = now
 
@@ -58,4 +60,3 @@ class DataLogger:
         epoch = time.mktime(since.timetuple())
         c.execute('DELETE FROM sensor_data WHERE timestamp < {};'.format(epoch))
         self.conn.commit()
-

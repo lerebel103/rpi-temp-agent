@@ -12,6 +12,7 @@ from hardware_id import get_cpu_id
 from pacer import Pacer
 from peripherals.blower_fan import BlowerFan
 from peripherals.temperature_sensors import Max31850Sensors
+from commands import Commands
 
 from db.data_logger import DataLogger
 
@@ -43,7 +44,10 @@ class Agent:
         self._data_logger = DataLogger(config['data_logger']['path'], get_cpu_id())
 
         # IController
-        self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client, self._data_logger)
+        self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client,
+                                          self._data_logger)
+
+        self._commands = Commands(self._client, self._data_logger)
 
     def _setup_logger(self):
         # Setup logger

@@ -47,7 +47,7 @@ class Agent:
         self._controller = TempController(self._config, self._temp_sensors, self._blower_fan, self._client,
                                           self._data_logger)
 
-        self._commands = Commands(self._client, self._data_logger)
+        self._commands = Commands(self._config, self._client, self._data_logger)
 
     def _setup_logger(self):
         # Setup logger

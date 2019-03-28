@@ -70,6 +70,7 @@ class Agent:
         self._client.loop_start()
         # Initialise controller
         self._controller.initialise()
+        self._commands.init()
 
     def run(self):
         self._go = True

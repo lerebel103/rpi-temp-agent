@@ -30,6 +30,7 @@ RETENTION_HOURS = 48
 
 class DataLogger:
     def __init__(self, sqlite_file, device_id):
+        self.sqlite_file = sqlite_file
         self.device_id = device_id
         self.conn = sqlite3.connect(sqlite_file)
         self._check_schema()
@@ -75,15 +76,15 @@ class DataLogger:
 
     def save_push_tokens(self, tokens):
         """ Register push tokens for this device"""
-        c = self.conn.cursor()
-        for token in tokens:
-
-            # First find out if this compbo exists
-            count = c.execute("SELECT COUNT(*) FROM push_tokens WHERE device_id ='{}' AND token = '{}';".format(self.device_id, token)).fetchall()[0]
-            if count[0] == 0:
-                c.execute(
-                    "INSERT INTO push_tokens (device_id, token) VALUES ('{}', '{}');".format(self.device_id, token))
-        self.conn.commit()
+        with sqlite3.connect(self.sqlite_file) as conn:
+            c = conn.cursor()
+            for token in tokens:
+                # First find out if this compbo exists
+                count = c.execute("SELECT COUNT(*) FROM push_tokens WHERE device_id ='{}' AND token = '{}';".format(self.device_id, token)).fetchall()[0]
+                if count[0] == 0:
+                    c.execute(
+                        "INSERT INTO push_tokens (device_id, token) VALUES ('{}', '{}');".format(self.device_id, token))
+            conn.commit()
 
 
 

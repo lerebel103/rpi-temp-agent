@@ -106,6 +106,7 @@ class TempController:
                     ('board', {'temp': self._temp_sensors.board_temp, 'status': 'OK'})
             ]
             self._data_logger.log_sensors(now, temps)
+            print('Push tokens are', self._data_logger.push_tokens())
 
         self._send_loop_count += 1
         if self._send_loop_count > self._config['controller']['send_data_loop_count']:

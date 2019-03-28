@@ -1,4 +1,6 @@
 import logging
+import uuid
+import json
 
 from hardware_id import get_cpu_id
 
@@ -18,8 +20,30 @@ class Commands:
         logger.info('Subscribed to {}'.format(topic))
 
     def _handle_message(self, mosq, obj, message):
-        payload = message.payload.decode("utf-8")
-        logger.info('Received config payload {}'.format(payload))
+        try:
+            payload = message.payload.decode("utf-8")
+            logger.info('Received config payload {}'.format(payload))
 
-        if len(payload) > 0:
-            print('got message')
+            if len(payload) > 0:
+                cmd = json.loads(payload)
+                print(cmd)
+
+                ok = False
+                if cmd['name'] == 'RegisterPushNotificationToken':
+                    ok = self._handle_register_push_notification_token(cmd)
+                else:
+                    logger.warn('Received unexpected command in payload {}'.format(payload))
+            
+                # Now ack/nack response
+                if ok:
+                    self._client.publish(cmd['reply_topic'], json.dumps({'id': cmd['id'], 'response': 'ACK'}))
+                else:
+                    self._client.publish(cmd['reply_topic'], json.dumps({'id': cmd['id'], 'response': 'NACK'}))
+        except Exception as ex:
+            logger.error('Error processing inbound command', ex)
+
+    def _handle_register_push_notification_token(self, cmd):
+        token = cmd['token']
+        logger.info('New push notification token {} received'.format(token))
+        self._data_logger.save_push_tokens([token])
+        return True

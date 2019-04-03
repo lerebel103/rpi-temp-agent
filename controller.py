@@ -69,8 +69,7 @@ class TempController:
         probe1_temp = self._temp_sensors.probe1_temp
         # TODO
         probe2_temp = self._temp_sensors.probe2_temp
- 
-      
+
         # Read fan state
         rpm = self._blower_fan.rpm
         healthy = self._blower_fan.is_healthy
@@ -92,6 +91,7 @@ class TempController:
 
         # Publish data
         if self._send_loop_count == 0:
+            # MQTT
             self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
             self._client.publish(self.topic + "/temperature/probe1", json.dumps(probe1_temp))
             self._client.publish(self.topic + "/temperature/probe2", json.dumps(probe2_temp))
@@ -99,7 +99,8 @@ class TempController:
             self._client.publish(self.topic + "/fan", json.dumps({'dutyCycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
             logger.debug('pit={}, probe={}, rpm={}, duty={}'.format(pit_temp, probe1_temp, rpm, duty_cycle))
 
-            temps=[
+            # data logger
+            temps = [
                     ('probe1', probe1_temp),
                     ('probe2', probe2_temp),
                     ('pit', pit_temp),

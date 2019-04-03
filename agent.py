@@ -15,6 +15,8 @@ from peripherals.temperature_sensors import Max31850Sensors
 from commands import Commands
 
 from db.data_logger import DataLogger
+from state_machine import BBQStateMachine
+from states import StoppedState
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,10 @@ class Agent:
                                           self._data_logger)
 
         self._commands = Commands(self._config, self._client, self._data_logger)
+
+        ctx = None
+        initial_state = StoppedState()
+        self._state_machine = BBQStateMachine(ctx, initial_state)
 
     def _setup_logger(self):
         # Setup logger
@@ -97,6 +103,7 @@ class Agent:
                 now = time.time()
 
                 # Tick controller
+                self._state_machine.run(now)
                 self._controller.tick(now)
 
                 # Pace control loop per desired interval

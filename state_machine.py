@@ -9,25 +9,24 @@ logger = logging.getLogger(__name__)
 SETPOINT_TIME_THRESHOLD = 5
 
 class StateContext:
-    def __init__(self, state, temperatures):
-        self.timestamp = None
+    def __init__(self, timestamp, state, temperatures):
+        self.timestamp = timestamp
         self.state = state
         self.temperatures = temperatures
 
 
 class BBQStateMachine:
     """ Defines a generic state machine. """
-    def __init__(self, ctx):
+    def __init__(self):
         self.current_states = {
             'probe1': SetPointInitial(),
             'probe2': SetPointInitial(),
         }
-        self.ctx = ctx
 
-    def run(self):
+    def run(self, ctx):
         # Run states and transition, very simple
         for sensor in self.current_states.keys():
-            self.current_states[sensor] = self.current_states[sensor].run(sensor, self.ctx)
+            self.current_states[sensor] = self.current_states[sensor].run(sensor, ctx)
 
 
 class SetPointInitial:

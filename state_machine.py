@@ -20,35 +20,36 @@ class BBQStateMachine:
     def run(self, timestamp):
         # Run states and transition, very simple
         for sensor in self.current_states.keys():
-            self.current_states[sensor] = self.current_states[sensor].run(timestamp, self.ctx)
+            self.current_states[sensor] = self.current_states[sensor].run(sensor, timestamp, self.ctx)
 
 
 class SetPointInitial:
-    def run(self, timestamp, ctx):
-        logger.info('Setpoint initial')
+    def run(self, sensor_name, timestamp, ctx):
+        data = ctx.temperatures.sensor_temp(sensor_name)
+        logger.info('Setpoint initial', data)
         return self
 
 
 class SetPointUnder:
-    def run(self, timestamp, ctx):
+    def run(self, sensor_name, timestamp, ctx):
 
         return self
 
 
 class SetPointOver:
-    def run(self, timestamp, ctx):
+    def run(self, sensor_name, timestamp, ctx):
 
         return self
 
 
 class SetPointOverAlarm:
-    def run(self, timestamp, ctx):
+    def run(self, sensor_name, timestamp, ctx):
 
         return self
 
 
 class SetPointAlarmCancelled:
-    def run(self, timestamp, ctx):
+    def run(self, sensor_name, timestamp, ctx):
 
         return self
 

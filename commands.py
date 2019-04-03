@@ -22,12 +22,10 @@ class Commands:
     def _handle_message(self, mosq, obj, message):
         try:
             payload = message.payload.decode("utf-8")
-            logger.info('Received config payload {}'.format(payload))
+            logger.debug('Received command payload {}'.format(payload))
 
             if len(payload) > 0:
                 cmd = json.loads(payload)
-                print(cmd)
-
                 ok = False
                 if cmd['name'] == 'RegisterPushNotificationToken':
                     ok = self._handle_register_push_notification_token(cmd)
@@ -44,6 +42,6 @@ class Commands:
 
     def _handle_register_push_notification_token(self, cmd):
         token = cmd['token']
-        logger.info('New push notification token {} received'.format(token))
+        logger.info('Push notification token {} received'.format(token))
         self._data_logger.save_push_tokens([token])
         return True

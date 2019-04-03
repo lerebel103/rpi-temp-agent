@@ -9,6 +9,7 @@ from hardware_id import get_cpu_id
 from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 from notifications import notify
+from state_machine import BBQStateMachine, StateContext
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,9 @@ class TempController:
         with open('config/state.json') as f:
             state = json.load(f)
         self._state = state
+
+        ctx = StateContext(self._state, self._temp_sensors)
+        self._state_machine = BBQStateMachine(ctx)
 
     def initialise(self):
         # Initialise peripherals
@@ -88,6 +92,8 @@ class TempController:
             self._blower_fan.on()  # Always make sure fan is on
         else:
             self._blower_fan.off()  # Always make sure fan is off
+
+        self._state_machine.run(now)
 
         # Publish data
         if self._send_loop_count == 0:

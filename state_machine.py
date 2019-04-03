@@ -1,25 +1,54 @@
+import logging
+logger = logging.getLogger(__name__)
+
 
 class StateContext:
-    pass
+    def __init__(self, state, temperatures):
+        self.state = state
+        self.temperatures = temperatures
 
 
 class BBQStateMachine:
     """ Defines a generic state machine. """
-    def __init__(self, initial_state, ctx):
-        self.current_state = initial_state
+    def __init__(self, ctx):
+        self.current_states = {
+            'probe1': SetPointInitial(),
+            'probe2': SetPointInitial(),
+        }
         self.ctx = ctx
 
     def run(self, timestamp):
-        """ Run forever, and allow state transitions to take place as a chain. """
-        while self.current_state is not None:
-            self.current_state = self.current_state.run(timestamp, self.ctx)
+        # Run states and transition, very simple
+        for sensor in self.current_states.keys():
+            self.current_states[sensor] = self.current_states[sensor].run(timestamp, self.ctx)
 
 
-class State:
-    """
-    Defines a State has an operation, and can be moved
-    into the next State given an Input:
-    """
-
+class SetPointInitial:
     def run(self, timestamp, ctx):
-        assert 0, 'run not implemented'
+        logger.info('Setpoint initial')
+        return self
+
+
+class SetPointUnder:
+    def run(self, timestamp, ctx):
+
+        return self
+
+
+class SetPointOver:
+    def run(self, timestamp, ctx):
+
+        return self
+
+
+class SetPointOverAlarm:
+    def run(self, timestamp, ctx):
+
+        return self
+
+
+class SetPointAlarmCancelled:
+    def run(self, timestamp, ctx):
+
+        return self
+

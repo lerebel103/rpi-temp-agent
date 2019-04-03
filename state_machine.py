@@ -10,6 +10,7 @@ SETPOINT_TIME_THRESHOLD = 5
 
 class StateContext:
     def __init__(self, state, temperatures):
+        self.timestamp = None
         self.state = state
         self.temperatures = temperatures
 
@@ -23,14 +24,14 @@ class BBQStateMachine:
         }
         self.ctx = ctx
 
-    def run(self, timestamp):
+    def run(self):
         # Run states and transition, very simple
         for sensor in self.current_states.keys():
-            self.current_states[sensor] = self.current_states[sensor].run(sensor, timestamp, self.ctx)
+            self.current_states[sensor] = self.current_states[sensor].run(sensor, self.ctx)
 
 
 class SetPointInitial:
-    def run(self, sensor_name, timestamp, ctx):
+    def run(self, sensor_name, ctx):
         data = ctx.temperatures.sensor_temp(sensor_name)
         if data is not None and  data['status'] == Max31850Sensors.Status.OK:
             temp = data['temp']
@@ -46,7 +47,7 @@ class SetPointUnder:
     def __init__(self):
         self.begin_time = datetime.now()
 
-    def run(self, sensor_name, timestamp, ctx):
+    def run(self, sensor_name, ctx):
         logger.info('SetpointUnder ' + sensor_name)
 
         # If we are above, good transition
@@ -63,7 +64,7 @@ class SetPointOver:
     def __init__(self):
         self.begin_time = datetime.now()
 
-    def run(self, sensor_name, timestamp, ctx):
+    def run(self, sensor_name, ctx):
         logger.info('SetpointOver ' + sensor_name)
 
         # If we are above, good transition

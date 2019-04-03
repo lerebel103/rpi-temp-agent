@@ -36,8 +36,7 @@ class TempController:
             state = json.load(f)
         self._state = state
 
-        ctx = StateContext(self._state, self._temp_sensors)
-        self._state_machine = BBQStateMachine(ctx)
+        self._state_machine = BBQStateMachine()
 
     def initialise(self):
         # Initialise peripherals
@@ -93,7 +92,8 @@ class TempController:
         else:
             self._blower_fan.off()  # Always make sure fan is off
 
-        self._state_machine.run(now)
+        ctx = StateContext(now, self._state, self._temp_sensors)
+        self._state_machine.run(ctx)
 
         # Publish data
         if self._send_loop_count == 0:

@@ -1,7 +1,7 @@
 {
-    "mode": 1,
+    "mode": 0,
     "pit": {
-        "setPoint": 160
+        "setPoint": 115
     },
     "probe1": {
         "setPoint": 95

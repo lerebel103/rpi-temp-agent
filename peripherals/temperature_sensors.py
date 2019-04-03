@@ -1,4 +1,5 @@
 import logging
+import sys
 import threading
 from time import time, sleep
 from enum import Enum, IntEnum
@@ -38,6 +39,11 @@ class Max31850Sensors:
         self.off()
 
         self._sensors = DS.scan(self._config['gpio'])
+        if len(self._sensors) == 0:
+            msg = 'No temperature sensors found, cowardly exiting.'
+            logger.error(msg)
+            sys.exit(msg)
+
         logger.info('Found temperature sensors with ids {}'.format(self._sensors))
 
         # Preload reading with initial state.

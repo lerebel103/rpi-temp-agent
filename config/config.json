@@ -41,7 +41,7 @@
         },
         "probe2": {
             "id": "3B-0CD8065DAB7B",
-            "temperature_offset": 0
+            "temperature_offset": 100
         },
         "gpio": 17,
         "sampling_seconds": 0.75

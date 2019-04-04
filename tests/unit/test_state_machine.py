@@ -2,7 +2,7 @@ import unittest
 import time
 from unittest.mock import patch, MagicMock
 
-from state_machine import SETPOINT_TIME_THRESHOLD, ALARM_RESET_THRESHOLD, SetPointInitial, StateContext, SensorError, SetPointUnder, SetPointOver, SetPointOverAlarm
+from state_machine import SETPOINT_TIME_THRESHOLD, ALARM_RESET_THRESHOLD, ALERT_SENSOR_ERROR_THRESHOLD, SetPointInitial, StateContext, SensorError, SetPointUnder, SetPointOver, SetPointOverAlarm
 from peripherals.temperature_sensors import Max31850Sensors
 
 
@@ -213,4 +213,63 @@ class TestSensorOverAlarm(unittest.TestCase):
         next_state = s.run(self.sensor_name, ctx)
         self.assertNotEqual(next_state, s)
         self.assertEqual(next_state.__class__, SetPointUnder)
+
+
+class TestSensorError(unittest.TestCase):
+    
+    @patch('peripherals.temperature_sensors.Max31850Sensors')
+    def setUp(self, Sensors):
+        self.Sensors = Sensors
+        self.sensor_name = 'probe1'
+        self.state_config = {'probe1': {'setPoint': 100} }
+
+    def test_alarm_sent_once(self):
+        """ temp consistently under setpoint """
+        sensors = self.Sensors.return_value
+        sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OPEN_CIRCUIT}
+
+        t = time.time()
+        s = SensorError(t, Max31850Sensors.Status.OPEN_CIRCUIT)
+        s.send_alarm = MagicMock(name='send_alarm')
+        elapsed = 0
+        while elapsed < ALERT_SENSOR_ERROR_THRESHOLD:
+            ctx = StateContext(t, self.state_config, sensors)
+            next_state = s.run(self.sensor_name, ctx)
+            self.assertEqual(next_state, s)
+            self.assertEqual(0, s.send_alarm.call_count)
+            elapsed += 0.1
+
+        # Next one generates alert, but only one alert
+        for i in range(20):
+            elapsed += 0.1
+            ctx = StateContext(t + elapsed, self.state_config, sensors)
+            next_state = s.run(self.sensor_name, ctx)
+            self.assertEqual(next_state, s)
+            self.assertEqual(1, s.send_alarm.call_count)
+
+    def test_error_reset(self):
+        """ temp consistently under setpoint """
+        sensors = self.Sensors.return_value
+        sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OPEN_CIRCUIT}
+
+        t = time.time()
+        s = SensorError(t, Max31850Sensors.Status.OPEN_CIRCUIT)
+        s.send_alarm = MagicMock(name='send_alarm')
+        elapsed = 0
+        while elapsed < ALERT_SENSOR_ERROR_THRESHOLD:
+            ctx = StateContext(t, self.state_config, sensors)
+            next_state = s.run(self.sensor_name, ctx)
+            self.assertEqual(next_state, s)
+            self.assertEqual(0, s.send_alarm.call_count)
+            elapsed += 0.1
+
+
+        # This gives us a reset via initial state
+        sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK, 'temp': 25.3}
+        elapsed += 0.1
+        ctx = StateContext(t + elapsed, self.state_config, sensors)
+        next_state = s.run(self.sensor_name, ctx)
+        self.assertNotEqual(next_state, s)
+        self.assertEqual(next_state.__class__, SetPointInitial)
+
 

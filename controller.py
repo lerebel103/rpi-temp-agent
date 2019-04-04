@@ -30,13 +30,12 @@ class TempController:
         self._temp_sensors = sensors
         self._blower_fan = blower_fan
         self._send_loop_count = 0
+        self._state_machine = None
 
         # Load dynamic state configuration
         with open('config/state.json') as f:
             state = json.load(f)
         self._state = state
-
-        self._state_machine = BBQStateMachine()
 
     def initialise(self):
         # Initialise peripherals
@@ -55,6 +54,7 @@ class TempController:
 
         # Set pid params initially
         self._update_pid_params()
+
 
     def start(self):
         logger.info('Controller starting.')
@@ -89,11 +89,15 @@ class TempController:
             # Set fan duty cycle and collect RPM
             self._blower_fan.duty_cycle = duty_cycle
             self._blower_fan.on()  # Always make sure fan is on
+ 
+            # Tick state machine
+            if self._state_machine == None:
+                self._state_machine = BBQStateMachine()
+            ctx = StateContext(now, self._state, self._temp_sensors)
+            self._state_machine.run(ctx)
         else:
             self._blower_fan.off()  # Always make sure fan is off
-
-        ctx = StateContext(now, self._state, self._temp_sensors)
-        self._state_machine.run(ctx)
+            self._state_machine = None
 
         # Publish data
         if self._send_loop_count == 0:

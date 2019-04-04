@@ -76,7 +76,7 @@ class Agent:
     def run(self):
         # Parse args (should probably be outside of this class really)
         parser = argparse.ArgumentParser()
-        parser.add_argument('test-notifications', help='Tests push notifications')
+        parser.add_argument('test-notifications', nargs='?', help='Tests push notifications')
         args = vars(parser.parse_args())
         if 'test-notifications' in args:
             self.test_notifications()

@@ -149,7 +149,7 @@ class SetPointOverAlarm(BaseSensorState):
     def handle_temp(self, temp, set_point):
         logger.debug('SetPointOverAlarm ' + self.sensor_name)
         if not self._alarm_sent:
-            msg = 'Yay,  going by {} it\'s cooked!'.format(self.sensor_name)
+            msg = 'Whoohoo! {} says it\'s cooked!'.format(self.sensor_name)
             self._alarm_sent = self.send_alarm(msg,
                                                {'sensor': self.sensor_name,
                                                 'set_point': set_point,

@@ -145,6 +145,7 @@ class SetPointOverAlarm(BaseSensorState):
     def __init__(self, t):
         self.begin_time = t
         self._alarm_sent = False
+        self.last_sent_time = None
 
     def handle_temp(self, temp, set_point):
         logger.debug('SetPointOverAlarm ' + self.sensor_name)
@@ -154,9 +155,15 @@ class SetPointOverAlarm(BaseSensorState):
                                                {'sensor': self.sensor_name,
                                                 'set_point': set_point,
                                                 'temp': temp})
+            self.last_sent_time = self.ctx.timestamp
         elif temp >= set_point:
             # Keep track of last time we've been over for later
             self.begin_time = self.ctx.timestamp
+
+            # It turns out exo does not support custom sounds, which is a problem to make this
+            # work like an alarm. So instead, we repeatedly send the alert, until it is acted upon
+            if self.ctx.timestamp - self.last_sent_time > 10:
+                self._alarm_sent = None
         elif self.ctx.timestamp - self.begin_time > ALARM_RESET_THRESHOLD:
             # We can now reset, been under for a while now
             return SetPointUnder(self.ctx.timestamp)

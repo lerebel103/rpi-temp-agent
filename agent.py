@@ -74,14 +74,15 @@ class Agent:
         self._commands.init()
 
     def run(self):
-
+        # Parse args (should probably be outside of this class really)
         parser = argparse.ArgumentParser()
-        parser.add_argument('--test-notification', help='Tests push notifications')
-        args = parser.parse_args()
-        print(args)
-
-        self._go = True
-        self._control_loop()
+        parser.add_argument('test-notifications', help='Tests push notifications')
+        args = vars(parser.parse_args())
+        if 'test-notifications' in args:
+            self.test_notifications()
+        else:
+            self._go = True
+            self._control_loop()
 
     def terminate(self):
         # Causes the control loop to stop
@@ -123,6 +124,10 @@ class Agent:
 
     def _on_disconnect(self, client, userdata, rc):
         logger.info('MQTT Disonnected with result code ' + str(rc))
+
+    def test_notifiactions(self):
+        from notifications.notify import push_all
+        push_all(self._data_logger, 'Test message')
 
 
 if __name__ == "__main__":

@@ -78,7 +78,7 @@ class Agent:
         parser = argparse.ArgumentParser()
         parser.add_argument('test-notifications', nargs='?', help='Tests push notifications')
         args = vars(parser.parse_args())
-        if 'test-notifications' in args:
+        if args['test-notifications'] is not None:
             self.test_notifications()
         else:
             self._go = True

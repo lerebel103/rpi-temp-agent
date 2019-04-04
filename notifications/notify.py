@@ -11,24 +11,26 @@ from requests.exceptions import HTTPError
 logger = logging.getLogger(__name__)
 
 
-def push_all(db, message, extra=None):
+def push_all(db, title, body, sound='default', data=None):
     is_ok = True
     for token in db.push_tokens():
-        logger.info('Pushing {} to {}'.format(message, token))
+        logger.info('Pushing {} to {}'.format(data, token))
         try:
-            is_ok = send_push_message(token, message, extra) and is_ok
+            is_ok = send_push_message(token, title, body, sound, data) and is_ok
         except DeviceNotRegisteredError:
             # Delete token then
             db.delete_tokens([token])
     return is_ok
 
 
-def send_push_message(token, message, extra=None):
+def send_push_message(token, title, body, sound, data=None):
     try:
         response = PushClient().publish(
             PushMessage(to=token,
-                        body=message,
-                        data=extra))
+                        title=title,
+                        body=body,
+                        sound=sound,
+                        data=data))
     except PushServerError as exc:
         # Encountered some likely formatting/validation error.
         logger.error('Push Server error: '.format(exc.message))

@@ -125,9 +125,9 @@ class Agent:
     def _on_disconnect(self, client, userdata, rc):
         logger.info('MQTT Disonnected with result code ' + str(rc))
 
-    def test_notifiactions(self):
+    def test_notifications(self):
         from notifications.notify import push_all
-        push_all(self._data_logger, 'Test message')
+        push_all(self._data_logger, 'BBQPi', 'Test Message!', data={'some data'})
 
 
 if __name__ == "__main__":

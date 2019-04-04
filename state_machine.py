@@ -1,12 +1,11 @@
 import logging
-from datetime import datetime
 
 from peripherals.temperature_sensors import Max31850Sensors
 from notifications.notify import push_all
 
 logger = logging.getLogger(__name__)
 
-# How long the setpoint has to consistently stay above this mark for it to trigger
+# How long the set point has to consistently stay above this mark for it to trigger
 SETPOINT_TIME_THRESHOLD = 5
 
 # How long we wait until the setpoint alarm is reset
@@ -27,6 +26,7 @@ class StateContext:
 class BBQStateMachine:
     """ Defines a generic state machine. """
     def __init__(self):
+        self.current_states = {}
         self.reset()
 
     def reset(self):
@@ -54,11 +54,11 @@ class BaseSensorState:
         if data is not None and data['status'] == Max31850Sensors.Status.OK:
             temp = data['temp']
             set_point = ctx.state[sensor_name]['setPoint']
-            return self.handleTemp(temp, set_point)
+            return self.handle_temp(temp, set_point)
         else:
-            return self.handleError(data)
+            return self.handle_error(data)
 
-    def handleError(self, data):
+    def handle_error(self, data):
         """ Something cactus with sensor, return error state """
         # Error state transition
         if 'status' in data:
@@ -67,7 +67,7 @@ class BaseSensorState:
             error = Max31850Sensors.Status.UNKNOWN
         return SensorError(self.ctx.timestamp, error)
 
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         pass
 
     def send_alarm(self, message):
@@ -85,11 +85,11 @@ class SensorError(BaseSensorState):
         self.error = error
         self._alarm_sent = False
 
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         # Reset
         return SetPointInitial()
 
-    def handleError(self, data):
+    def handle_error(self, data):
         """ So here, we are in error state, need to move out of it when things come back to normal """
         logger.debug('SensorError ' + self.sensor_name + ' ' + str(self.error))
  
@@ -102,7 +102,7 @@ class SensorError(BaseSensorState):
 
 
 class SetPointInitial(BaseSensorState):
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         if temp < set_point:
             return SetPointUnder(self.ctx.timestamp)
         else:
@@ -113,7 +113,7 @@ class SetPointUnder(BaseSensorState):
     def __init__(self, t):
         self.begin_time = t
 
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         logger.debug('SetpointUnder ' + self.sensor_name)
 
         # If we are above, good transition
@@ -127,7 +127,7 @@ class SetPointOver(BaseSensorState):
     def __init__(self, t):
         self.begin_time = t
 
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         logger.debug('SetpointOver ' + self.sensor_name)
 
         # If we are above, good transition
@@ -144,7 +144,7 @@ class SetPointOverAlarm(BaseSensorState):
         self.begin_time = t
         self._alarm_sent = False
 
-    def handleTemp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):
         logger.debug('SetPointOverAlarm ' + self.sensor_name)
         if not self._alarm_sent:
             msg = '{}'  # TODO

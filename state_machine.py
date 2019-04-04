@@ -70,10 +70,10 @@ class BaseSensorState:
     def handle_temp(self, temp, set_point):
         pass
 
-    def send_alarm(self, message):
+    def send_alarm(self, message, data):
         if self.ctx.db is not None:
             logger.info('Sending alarm for ' + self.sensor_name + ': ' + message)
-            return push_all(self.ctx.db, 'BBQPi', message, data={})
+            return push_all(self.ctx.db, 'BBQPi', message, data=data)
         else:
             logger.info('Alarm not sent for ' + self.sensor_name + ', no DB.')
             return True
@@ -96,7 +96,9 @@ class SensorError(BaseSensorState):
         # if we are stuck in this mode over threshold, send notification
         if not self._alarm_sent and self.ctx.timestamp - self.begin_time > ALERT_SENSOR_ERROR_THRESHOLD:
             msg = 'Sensor error on {}'.format(self.sensor_name)
-            self._alarm_sent = self.send_alarm(msg)
+            self._alarm_sent = self.send_alarm(msg,
+                                               {'sensor': self.sensor_name,
+                                                'error': str(self.error)})
 
         return self
 
@@ -148,7 +150,10 @@ class SetPointOverAlarm(BaseSensorState):
         logger.debug('SetPointOverAlarm ' + self.sensor_name)
         if not self._alarm_sent:
             msg = 'Yay,  going by {} it\'s cooked!'.format(self.sensor_name)
-            self._alarm_sent = self.send_alarm(msg)
+            self._alarm_sent = self.send_alarm(msg,
+                                               {'sensor': self.sensor_name,
+                                                'set_point': set_point,
+                                                'temp': temp})
         elif temp >= set_point:
             # Keep track of last time we've been over for later
             self.begin_time = self.ctx.timestamp

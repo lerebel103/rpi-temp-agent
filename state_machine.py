@@ -162,7 +162,7 @@ class SetPointOverAlarm(BaseSensorState):
 
             # It turns out exo does not support custom sounds, which is a problem to make this
             # work like an alarm. So instead, we repeatedly send the alert, until it is acted upon
-            if self.ctx.timestamp - self.last_sent_time > 10:
+            if self.ctx.timestamp - self.last_sent_time > 5:
                 self._alarm_sent = None
         elif self.ctx.timestamp - self.begin_time > ALARM_RESET_THRESHOLD:
             # We can now reset, been under for a while now

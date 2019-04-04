@@ -91,9 +91,9 @@ class TempController:
             self._blower_fan.on()  # Always make sure fan is on
  
             # Tick state machine
-            if self._state_machine == None:
+            if self._state_machine is None:
                 self._state_machine = BBQStateMachine()
-            ctx = StateContext(now, self._state, self._temp_sensors)
+            ctx = StateContext(now, self._state, self._temp_sensors, db=self._data_logger)
             self._state_machine.run(ctx)
         else:
             self._blower_fan.off()  # Always make sure fan is off

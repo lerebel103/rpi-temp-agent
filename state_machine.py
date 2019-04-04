@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from peripherals.temperature_sensors import Max31850Sensors
+from notifications.notify import push_all
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +17,11 @@ ALERT_SENSOR_ERROR_THRESHOLD = 60
 
 
 class StateContext:
-    def __init__(self, timestamp, state, temperatures):
+    def __init__(self, timestamp, state, temperatures, db=None):
         self.timestamp = timestamp
         self.state = state
         self.temperatures = temperatures
+        self.db = db
 
 
 class BBQStateMachine:
@@ -69,8 +71,12 @@ class BaseSensorState:
         pass
 
     def send_alarm(self, message):
-        logger.info('Sending alarm ' + self.sensor_name + ' ' + message)
-        return True
+        if self.ctx.db is not None:
+            logger.info('Sending alarm for ' + self.sensor_name + ': ' + message)
+            return push_all(self.ctx.db, message)
+        else:
+            logger.info('Alarm not sent for ' + self.sensor_name + ', no DB.')
+            return True
 
 
 class SensorError(BaseSensorState):

@@ -76,7 +76,6 @@ class TestSensorOver(unittest.TestCase):
         sensors = self.Sensors.return_value
         sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK, 'temp': 100}
 
-
         elapsed = 0
         t = time.time()
         s = SetPointOver(t)
@@ -92,7 +91,6 @@ class TestSensorOver(unittest.TestCase):
         next_state = s.run(self.sensor_name, ctx)
         self.assertNotEqual(next_state, s)
         self.assertEqual(next_state.__class__, SetPointOverAlarm)
-       
 
     def test_to_under(self):
         """ We've been over, but not quite for alarm, back to under """
@@ -262,7 +260,6 @@ class TestSensorError(unittest.TestCase):
             self.assertEqual(next_state, s)
             self.assertEqual(0, s.send_alarm.call_count)
             elapsed += 0.1
-
 
         # This gives us a reset via initial state
         sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK, 'temp': 25.3}

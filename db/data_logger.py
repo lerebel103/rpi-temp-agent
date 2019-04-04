@@ -72,7 +72,8 @@ class DataLogger:
     def push_tokens(self):
         """ Get all known push tokens registered under for this device"""
         c = self.conn.cursor()
-        return c.execute("SELECT token FROM push_tokens WHERE device_id ='{}';".format(self.device_id)).fetchall()
+        r = c.execute("SELECT token FROM push_tokens WHERE device_id ='{}';".format(self.device_id)).fetchall()
+        return [row[0] for row in r]
 
     def save_push_tokens(self, tokens):
         """ Register push tokens for this device"""
@@ -86,6 +87,21 @@ class DataLogger:
                         "INSERT INTO push_tokens (device_id, token) VALUES ('{}', '{}');".format(self.device_id, token))
             conn.commit()
 
+    def delete_tokens(self, tokens):
+        """ Removes push tokens for specific device"""
+        with sqlite3.connect(self.sqlite_file) as conn:
+            c = conn.cursor()
+            q = "DELETE FROM push_tokens WHERE token IN ( "
+            first = True
+            for token in tokens:
+                if first:
+                    q += "'{}'".format(token)
+                else:
+                    q += ", '{}'".format(token)
+                first = False
 
+            q += ");"
+            c.execute(q)
+            conn.commit()
 
 

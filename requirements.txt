@@ -1,4 +1,5 @@
 paho-mqtt
+exponent_server_sdk
 RPi.GPIO
 memoized
 -e git+ssh://git@github.com/lerebel103/BitBangingDS18B20.git#egg=ds18b20&subdirectory=python

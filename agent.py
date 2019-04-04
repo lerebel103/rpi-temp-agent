@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 import time
+import argparse
 
 import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt_client
@@ -73,6 +74,12 @@ class Agent:
         self._commands.init()
 
     def run(self):
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--test-notification', help='Tests push notifications')
+        args = parser.parse_args()
+        print(args)
+
         self._go = True
         self._control_loop()
 

@@ -9,7 +9,8 @@ from hardware_id import get_cpu_id
 from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 from notifications import notify
-from state_machine import BBQStateMachine, StateContext
+from state_machine.sm import BBQStateMachine
+from state_machine.state_context import StateContext
 
 logger = logging.getLogger(__name__)
 

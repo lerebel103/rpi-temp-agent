@@ -2,7 +2,9 @@ import unittest
 import time
 from unittest.mock import patch, MagicMock
 
-from state_machine import SETPOINT_TIME_THRESHOLD, ALARM_RESET_THRESHOLD, ALERT_SENSOR_ERROR_THRESHOLD, SetPointInitial, StateContext, SensorError, SetPointUnder, SetPointOver, SetPointOverAlarm
+from state_machine.state_context import StateContext
+from state_machine.common_states import ALERT_SENSOR_ERROR_THRESHOLD, SensorError
+from state_machine.probe_states import SETPOINT_TIME_THRESHOLD, ALARM_RESET_THRESHOLD, SetPointInitial, SetPointUnder, SetPointOver, SetPointOverAlarm
 from peripherals.temperature_sensors import Max31850Sensors
 
 

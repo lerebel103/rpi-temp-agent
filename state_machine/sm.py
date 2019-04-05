@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 class BBQStateMachine:
-
     """ Defines the top level state machine for all sensors. """
+
     def __init__(self):
         self.current_states = {}
         self.reset()
@@ -24,7 +24,3 @@ class BBQStateMachine:
         # Run states and transition, very simple
         for sensor in self.current_states.keys():
             self.current_states[sensor] = self.current_states[sensor].run(sensor, ctx)
-
-
-
-

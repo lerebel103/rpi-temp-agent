@@ -8,7 +8,6 @@ from memoized import memoized
 from hardware_id import get_cpu_id
 from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
-from notifications import notify
 from state_machine.sm import BBQStateMachine
 from state_machine.state_context import StateContext
 
@@ -55,7 +54,6 @@ class TempController:
 
         # Set pid params initially
         self._update_pid_params()
-
 
     def start(self):
         logger.info('Controller starting.')

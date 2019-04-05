@@ -1,7 +1,5 @@
 import logging
 
-from peripherals.temperature_sensors import Max31850Sensors
-from notifications.notify import push_all
 from state_machine.common_states import BaseSensorState
 
 logger = logging.getLogger(__name__)
@@ -14,7 +12,6 @@ ALARM_RESET_THRESHOLD = 60
 
 # How long we wait until the setpoint alarm is reset
 ALERT_SENSOR_ERROR_THRESHOLD = 60
-
 
 
 class SetPointInitial(BaseSensorState):
@@ -83,5 +80,3 @@ class SetPointOverAlarm(BaseSensorState):
             return SetPointUnder(self.ctx.timestamp)
 
         return self
-
-

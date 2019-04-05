@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 ALERT_SENSOR_ERROR_THRESHOLD = 60
 
 
-
 class BaseSensorState:
     def __init__(self):
         self.ctx = None
@@ -60,7 +59,7 @@ class SensorError(BaseSensorState):
     def handle_error(self, data):
         """ So here, we are in error state, need to move out of it when things come back to normal """
         logger.debug('SensorError ' + self.sensor_name + ' ' + str(self.error))
- 
+
         # if we are stuck in this mode over threshold, send notification
         if not self._alarm_sent and self.ctx.timestamp - self.begin_time > ALERT_SENSOR_ERROR_THRESHOLD:
             msg = 'Sensor error on {}'.format(self.sensor_name)
@@ -69,5 +68,3 @@ class SensorError(BaseSensorState):
                                                 'error': str(self.error)})
 
         return self
-
-

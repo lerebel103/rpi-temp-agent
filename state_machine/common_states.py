@@ -20,7 +20,7 @@ class BaseSensorState:
         data = ctx.temperatures.sensor_temp(sensor_name)
         if data is not None and data['status'] == Max31850Sensors.Status.OK:
             temp = data['temp']
-            set_point = ctx.state[sensor_name]['setPoint']
+            set_point = ctx.user_config[sensor_name]['setPoint']
             return self.handle_temp(temp, set_point)
         else:
             return self.handle_error(data)

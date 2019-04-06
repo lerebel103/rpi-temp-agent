@@ -107,7 +107,6 @@ class Max31850Sensors:
         conf = self._config[name]
         return self._get_temp(conf)
 
-
     def _get_temp(self, conf):
         if conf['id'] in self._temps:
             sensor_info = deepcopy(self._temps[conf['id']])

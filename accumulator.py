@@ -30,7 +30,7 @@ class Accumulator:
         self._y = []
 
     def linear_derivative(self, from_time=None):
-        """ Linear fit derivative Celcius/second, delta second from desired point """
+        """ Linear fit derivative Celcius/second, from optional desired timestamp to back of queue. """
         if self.length() < 1:
             return 0
         elif from_time is None:
@@ -46,3 +46,5 @@ class Accumulator:
         while self.length() > 0 and self.interval() > self.interval_max:
             self._x.pop(0)
             self._y.pop(0)
+
+

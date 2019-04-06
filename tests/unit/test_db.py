@@ -1,6 +1,5 @@
 import unittest
 import os
-from unittest.mock import patch, MagicMock
 
 from db.data_logger import DataLogger
 

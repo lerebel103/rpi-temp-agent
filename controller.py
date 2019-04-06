@@ -9,7 +9,7 @@ from hardware_id import get_cpu_id
 from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 from state_machine.sm import BBQStateMachine
-from state_machine.state_context import StateContext
+from state_machine.state_context import StateContext, DEFAULT_ACCUMULATORS
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,9 @@ class TempController:
         with open('config/state.json') as f:
             state = json.load(f)
         self._state = state
+
+        # Setup accumulators
+        self._accumulators = DEFAULT_ACCUMULATORS
 
     def initialise(self):
         # Initialise peripherals
@@ -66,16 +69,48 @@ class TempController:
         logger.info('Controller stopped.')
 
     def tick(self, now):
-        # Read sensor temps and publish
-        pit_temp = self._temp_sensors.pit_temp
-        probe1_temp = self._temp_sensors.probe1_temp
-        # TODO
-        probe2_temp = self._temp_sensors.probe2_temp
+        # Spin through all sensors and control the the thing
+        temps = []
+        for sensor_name in self._accumulators:
+            sensor_state = self._temp_sensors[sensor_name]
+            if sensor_state['status'] == Max31850Sensors.Status.OK:
+                temp = sensor_state['temp']
+                # Start by accumulating values over time
+                self._accumulators[sensor_name].add(now, temp)
+                temps.append((sensor_name, sensor_state))
 
-        # Read fan state
-        rpm = self._blower_fan.rpm
-        healthy = self._blower_fan.is_healthy
+                if sensor_name == 'pit':
+                    self.control_pit(now, temp)
 
+            # Publish data for these sensors
+            if self._send_loop_count == 0:
+                topic = self.topic + '/temperature/{}'.format(sensor_name)
+                self._client.publish(topic, json.dumps(temp))
+
+        # Tick state machine
+        if self._state['mode'] == Mode.ACTIVE:
+            if self._state_machine is None:
+                self._state_machine = BBQStateMachine()
+            ctx = StateContext(now, self._state, self._temp_sensors, accumulators=self._accumulators,
+                               db=self._data_logger)
+            self._state_machine.run(ctx)
+        else:
+            self._state_machine = None
+
+        # Publish and log more data
+        if self._send_loop_count == 0:
+            # Publish temp of board itself
+            self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
+
+            # Data log the entire set
+            temps.append(('board', {'temp': self._temp_sensors.board_temp, 'status': 'OK'}))
+            self._data_logger.log_sensors(now, temps)
+
+        self._send_loop_count += 1
+        if self._send_loop_count > self._config['controller']['send_data_loop_count']:
+            self._send_loop_count = 0
+
+    def _control_pit(self, now, pit_temp):
         # Calculate duty cycle
         duty_cycle = 0
         if self._state['mode'] == Mode.ACTIVE:
@@ -88,38 +123,16 @@ class TempController:
             # Set fan duty cycle and collect RPM
             self._blower_fan.duty_cycle = duty_cycle
             self._blower_fan.on()  # Always make sure fan is on
- 
-            # Tick state machine
-            if self._state_machine is None:
-                self._state_machine = BBQStateMachine()
-            ctx = StateContext(now, self._state, self._temp_sensors, db=self._data_logger)
-            self._state_machine.run(ctx)
         else:
             self._blower_fan.off()  # Always make sure fan is off
-            self._state_machine = None
 
-        # Publish data
         if self._send_loop_count == 0:
-            # MQTT
-            self._client.publish(self.topic + "/temperature/board", json.dumps({'temp': self._temp_sensors.board_temp}))
-            self._client.publish(self.topic + "/temperature/probe1", json.dumps(probe1_temp))
-            self._client.publish(self.topic + "/temperature/probe2", json.dumps(probe2_temp))
-            self._client.publish(self.topic + "/temperature/pit", json.dumps(pit_temp))
-            self._client.publish(self.topic + "/fan", json.dumps({'dutyCycle': duty_cycle, 'rpm': rpm, 'healthy': healthy}))
-            logger.debug('pit={}, probe={}, rpm={}, duty={}'.format(pit_temp, probe1_temp, rpm, duty_cycle))
-
-            # data logger
-            temps = [
-                    ('probe1', probe1_temp),
-                    ('probe2', probe2_temp),
-                    ('pit', pit_temp),
-                    ('board', {'temp': self._temp_sensors.board_temp, 'status': 'OK'})
-            ]
-            self._data_logger.log_sensors(now, temps)
-
-        self._send_loop_count += 1
-        if self._send_loop_count > self._config['controller']['send_data_loop_count']:
-            self._send_loop_count = 0
+            # Publish Fan state
+            self._client.publish(self.topic + "/fan",
+                                 json.dumps({
+                                     'dutyCycle': duty_cycle,
+                                     'rpm': self._blower_fan.rpm,
+                                     'healthy': self._blower_fan.is_healthy}))
 
     def _message_config(self, mosq, obj, message):
         root_topic = self.topic

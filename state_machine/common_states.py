@@ -54,7 +54,10 @@ class SensorError(BaseSensorState):
 
     def handle_temp(self, temp, set_point):
         # Reset
-        return self.ctx.probe_init_state_class()
+        if self.sensor_name == 'pit':
+            return self.ctx.pit_init_state_class()
+        else:
+            return self.ctx.probe_init_state_class()
 
     def handle_error(self, data):
         """ So here, we are in error state, need to move out of it when things come back to normal """

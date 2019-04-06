@@ -72,7 +72,7 @@ class TempController:
         # Spin through all sensors and control the the thing
         temps = []
         for sensor_name in self._accumulators:
-            sensor_state = self._temp_sensors[sensor_name]
+            sensor_state = self._temp_sensors.sensor_temp(sensor_name)
             if sensor_state['status'] == Max31850Sensors.Status.OK:
                 temp = sensor_state['temp']
                 # Start by accumulating values over time
@@ -80,12 +80,12 @@ class TempController:
                 temps.append((sensor_name, sensor_state))
 
                 if sensor_name == 'pit':
-                    self.control_pit(now, temp)
+                    self._control_pit(now, temp)
 
             # Publish data for these sensors
             if self._send_loop_count == 0:
                 topic = self.topic + '/temperature/{}'.format(sensor_name)
-                self._client.publish(topic, json.dumps(temp))
+                self._client.publish(topic, json.dumps(sensor_state))
 
         # Tick state machine
         if self._state['mode'] == Mode.ACTIVE:
@@ -114,11 +114,10 @@ class TempController:
         # Calculate duty cycle
         duty_cycle = 0
         if self._state['mode'] == Mode.ACTIVE:
-            if pit_temp['status'] == Max31850Sensors.Status.OK:
-                duty_cycle = self._pid.update(now, pit_temp['temp'])
-                duty_cycle += self._config['controller']['blower_cycle_min']
-                duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
-                duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
+            duty_cycle = self._pid.update(now, pit_temp)
+            duty_cycle += self._config['controller']['blower_cycle_min']
+            duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
+            duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
 
             # Set fan duty cycle and collect RPM
             self._blower_fan.duty_cycle = duty_cycle

@@ -17,8 +17,9 @@ class ComingToTemp(BaseSensorState):
     def handle_temp(self, temp, set_point):
 
         last_minute = self.ctx.timestamp - 60
+        print(temp)
         print('** derivative ' +
-              self.ctx.accumulators[self.sensor_name].linear_derivative(last_minute))
+              str(self.ctx.accumulators[self.sensor_name].linear_derivative(last_minute)))
 
         return self
 
@@ -29,7 +30,8 @@ class UpToTemp(BaseSensorState):
 
 
 class OverTemp(BaseSensorState):
-    def handle_temp(self, temp, set_point):
+    def handle_temp(self, temp, set_point):    
+        print('over temp')
         return self
 
 

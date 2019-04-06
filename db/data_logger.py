@@ -50,7 +50,7 @@ class DataLogger:
                 temp = -1
             c.execute(
                 "INSERT INTO sensor_data (timestamp, device_id, sensor_name, temp, status) VALUES ({}, '{}', '{}', {}, '{}');". \
-                format(timestamp, self.device_id, name, temp, data['status']))
+                    format(timestamp, self.device_id, name, temp, data['status']))
         self.conn.commit()
 
         # Delete old entries periodically
@@ -59,6 +59,13 @@ class DataLogger:
         if self._last_trim_datetime is None or threshold > self._last_trim_datetime:
             self.trim()
             self._last_trim_datetime = now
+
+    def data_for_sensor(self, sensor, start=None, end=None):
+        c = self.conn.cursor()
+        items = c.execute(
+            "SELECT timestamp, temp, status FROM sensor_data WHERE device_id ='{}' AND sensor_name = '{}';".format(self.device_id,
+                                                                                      sensor)).fetchall()
+        return list(map(lambda x: {'timestamp': x[0], 'temp': x[1], 'status': x[2]}, items))
 
     def trim(self):
         logger.debug('Trimming data logger entries');
@@ -81,7 +88,10 @@ class DataLogger:
             c = conn.cursor()
             for token in tokens:
                 # First find out if this compbo exists
-                count = c.execute("SELECT COUNT(*) FROM push_tokens WHERE device_id ='{}' AND token = '{}';".format(self.device_id, token)).fetchall()[0]
+                count = c.execute(
+                    "SELECT COUNT(*) FROM push_tokens WHERE device_id ='{}' AND token = '{}';".format(self.device_id,
+                                                                                                      token)).fetchall()[
+                    0]
                 if count[0] == 0:
                     c.execute(
                         "INSERT INTO push_tokens (device_id, token) VALUES ('{}', '{}');".format(self.device_id, token))
@@ -103,5 +113,3 @@ class DataLogger:
             q += ");"
             c.execute(q)
             conn.commit()
-
-

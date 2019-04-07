@@ -21,6 +21,9 @@ class BaseSensorState:
         if data is not None and data['status'] == Max31850Sensors.Status.OK:
             temp = data['temp']
             set_point = ctx.user_config[sensor_name]['setPoint']
+
+            # Accumulate and send temp for handling
+            self.ctx.accumulators[sensor_name].add(ctx.timestamp, temp)
             return self.handle_temp(temp, set_point)
         else:
             return self.handle_error(data)

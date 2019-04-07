@@ -17,11 +17,31 @@ STALL_THRESHOLD = 0.1
 # Allow a band tanslating to +/- around setpoint
 SETPOINT_ERROR_PERC = 0.05
 
+# Lid open derivative
+LID_OPEN_DERIVATIVE = -10  # Celcius/min
+
+
+def is_lid_open(ctx, sensor_name):
+    t_short = ctx.timestamp - SHORT_TERM_INTERVAL
+    d_short = ctx.accumulators[sensor_name].linear_derivative(t_short) * 60
+
+    return d_short < LID_OPEN_DERIVATIVE
+
+
+def is_flame_out(ctx, sensor_name):
+    t_long = ctx.timestamp - LONG_TERM_INTERVAL
+    d_long = ctx.accumulators[sensor_name].linear_derivative(t_long) * 60
+
+    return d_long < 0
+
+
+def is_up_to_temp(temp, set_point):
+    return abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC
+
 
 class PitInitial(BaseSensorState):
     """ Initial state, work out what state we're in... """
     def handle_temp(self, temp, set_point):
-        print('Initial')
         if abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC:
             # Cool we are in steady state
             return UpToTemp()
@@ -35,45 +55,59 @@ class PitInitial(BaseSensorState):
 
 
 class ComingToTemp(BaseSensorState):
+    """ We're heating up, but keep an eye on trends ..."""
 
     def handle_temp(self, temp, set_point):
-        print('Coming Up to Temp')
-        t_short = self.ctx.timestamp - SHORT_TERM_INTERVAL
-        d_short = self.ctx.accumulators[self.sensor_name].linear_derivative(t_short)
-        if d_short < -10:
-            print('***** lid open')
 
-        if abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC:
+        if is_up_to_temp(temp, set_point):
             # Cool we are in steady state
             return UpToTemp()
-        elif temp < set_point:
-            return self
+        elif is_lid_open(self.ctx, self.sensor_name):
+            return LidOpen()
+        elif is_flame_out(self.ctx, self.sensor_name):
+            # We have a problem, we keep on trying but temp keeps going down, flame out
+            return FlameOut()
         else:
-            return OverTemp()
+            return self
 
 
 class UpToTemp(BaseSensorState):
     def handle_temp(self, temp, set_point):
-        print('Up to Temp')
-        if abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC:
+        if is_up_to_temp(temp, set_point):
             # Cool we are in steady state
             return self
-        elif temp < set_point:
-            return self
-        return self
+        elif is_lid_open(self.ctx, self.sensor_name):
+            return LidOpen()
+        elif is_flame_out(self.ctx, self.sensor_name):
+            # We have a problem, we keep on trying but temp keeps going down, flame out
+            return FlameOut()
+        elif temp < set_point - set_point*SETPOINT_ERROR_PERC:
+            return ComingToTemp()
+        else:
+            return OverTemp()
 
 
 class OverTemp(BaseSensorState):
     def handle_temp(self, temp, set_point):    
-        print('over temp')
-        return self
+        if temp < set_point + set_point*SETPOINT_ERROR_PERC:
+            return UpToTemp()
+        else:
+            return self
 
 
 class LidOpen(BaseSensorState):
     def handle_temp(self, temp, set_point):
-        return self
+        if is_lid_open(self.ctx, self.sensor_name):
+            return self
+        else:
+            # Start over again
+            return PitInitial()
 
 
 class FlameOut(BaseSensorState):
     def handle_temp(self, temp, set_point):
-        return self
+        if is_flame_out(self.ctx, self.sensor_name):
+            return self
+        else:
+            # Start over again
+            return PitInitial()

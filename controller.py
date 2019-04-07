@@ -76,7 +76,6 @@ class TempController:
             if sensor_state['status'] == Max31850Sensors.Status.OK:
                 temp = sensor_state['temp']
                 # Start by accumulating values over time
-                self._accumulators[sensor_name].add(now, temp)
                 temps.append((sensor_name, sensor_state))
 
                 if sensor_name == 'pit':

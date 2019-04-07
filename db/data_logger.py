@@ -62,9 +62,17 @@ class DataLogger:
 
     def data_for_sensor(self, sensor, start=None, end=None):
         c = self.conn.cursor()
-        items = c.execute(
-            "SELECT timestamp, temp, status FROM sensor_data WHERE device_id ='{}' AND sensor_name = '{}';".format(self.device_id,
-                                                                                      sensor)).fetchall()
+
+        q = "SELECT timestamp, temp, status FROM sensor_data WHERE device_id ='{}' AND sensor_name = '{}'"\
+            .format(self.device_id, sensor)
+
+        if start is not None:
+            q += ' AND  timestamp >= {}'.format(start)
+        if end is not None:
+            q += ' AND  timestamp <= {}'.format(end)
+        q += ';'
+
+        items = c.execute(q).fetchall()
         return list(map(lambda x: {'timestamp': x[0], 'temp': x[1], 'status': x[2]}, items))
 
     def trim(self):

@@ -38,9 +38,9 @@ class TestDataLogger(unittest.TestCase):
         db = DataLogger(test_db, '1234')
 
         for i in range(100):
-            db.log_sensors(i, [('probe1', {'temp': 100+i, 'status': 'OK'}),
-                               ('probe2', {'temp': 200+i, 'status': 'OK'}),
-                               ('probe3', {'temp': 300+i, 'status': 'OK'})]
+            db.log_sensors(i, [('probe1', {'temp': 100 + i, 'status': 'OK'}),
+                               ('probe2', {'temp': 200 + i, 'status': 'OK'}),
+                               ('probe3', {'temp': 300 + i, 'status': 'OK'})]
                            )
 
         # Get them back
@@ -50,7 +50,7 @@ class TestDataLogger(unittest.TestCase):
             self.assertTrue('timestamp' in r)
             self.assertEqual(i, r['timestamp'])
             self.assertTrue('temp' in r)
-            self.assertEqual(100+i, r['temp'])
+            self.assertEqual(100 + i, r['temp'])
             self.assertTrue('status' in r)
             self.assertEqual('OK', r['status'])
             i += 1
@@ -61,7 +61,7 @@ class TestDataLogger(unittest.TestCase):
             self.assertTrue('timestamp' in r)
             self.assertEqual(i, r['timestamp'])
             self.assertTrue('temp' in r)
-            self.assertEqual(200+i, r['temp'])
+            self.assertEqual(200 + i, r['temp'])
             self.assertTrue('status' in r)
             self.assertEqual('OK', r['status'])
             i += 1
@@ -72,7 +72,55 @@ class TestDataLogger(unittest.TestCase):
             self.assertTrue('timestamp' in r)
             self.assertEqual(i, r['timestamp'])
             self.assertTrue('temp' in r)
-            self.assertEqual(300+i, r['temp'])
+            self.assertEqual(300 + i, r['temp'])
             self.assertTrue('status' in r)
             self.assertEqual('OK', r['status'])
             i += 1
+
+    def test_log_sensor_start(self):
+        db = DataLogger(test_db, '1234')
+
+        for i in range(100):
+            db.log_sensors(i, [('probe1', {'temp': 100 + i, 'status': 'OK'}),
+                               ('probe2', {'temp': 200 + i, 'status': 'OK'}),
+                               ('probe3', {'temp': 300 + i, 'status': 'OK'})]
+
+                           )
+
+        # with start offset
+        for start in range(10, 100, 10):
+            results = db.data_for_sensor('probe1', start)
+            k = 0
+            for r in results:
+                self.assertTrue('timestamp' in r)
+                self.assertEqual(start + k, r['timestamp'])
+                self.assertTrue('temp' in r)
+                self.assertEqual(100 + start + k, r['temp'])
+                self.assertTrue('status' in r)
+                self.assertEqual('OK', r['status'])
+                k += 1
+
+    def test_log_sensor_start_end(self):
+        db = DataLogger(test_db, '1234')
+
+        for i in range(100):
+            db.log_sensors(i, [('probe1', {'temp': 100 + i, 'status': 'OK'}),
+                               ('probe2', {'temp': 200 + i, 'status': 'OK'}),
+                               ('probe3', {'temp': 300 + i, 'status': 'OK'})]
+
+                           )
+
+        # with start offset
+        for start in range(10, 100, 10):
+            end = start + 5
+            results = db.data_for_sensor('probe1', start, end)
+            self.assertEqual(6, len(results))
+            k = 0
+            for r in results:
+                self.assertTrue('timestamp' in r)
+                self.assertEqual(start + k, r['timestamp'])
+                self.assertTrue('temp' in r)
+                self.assertEqual(100 + start + k, r['temp'])
+                self.assertTrue('status' in r)
+                self.assertEqual('OK', r['status'])
+                k += 1

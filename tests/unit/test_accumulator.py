@@ -60,7 +60,6 @@ class TestAccumulator(unittest.TestCase):
         for delta in range(50, 100):
             acc.add(t + delta, 100 - delta)
 
-        # So we have zero here for the lot
         self.assertAlmostEqual(0, acc.linear_derivative(), 1)
 
         # exactly mid point, we have -1 by definition

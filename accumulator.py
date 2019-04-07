@@ -1,4 +1,3 @@
-import numpy as np
 import bisect
 
 
@@ -31,14 +30,18 @@ class Accumulator:
 
     def linear_derivative(self, from_time=None):
         """ Linear fit derivative Celcius/second, from optional desired timestamp to back of queue. """
-        if self.length() < 1:
+        if self.length() < 2:
             return 0
         elif from_time is None:
-            return np.polyfit(self._x, self._y, 1)[0]
+            return (self._y[-1] - self._y[0]) / (self._x[-1] - self._x[0])
         else:
             idx = bisect.bisect(self._x, from_time)
-            if 0 <= idx < self.length():
-                return np.polyfit(self._x[idx:], self._y[idx:], 1)[0]
+            if 0 <= idx < self.length()-1:
+                dt = (self._x[-1] - self._x[idx])
+                if dt == 0:
+                    return 0
+                else:
+                    return (self._y[-1] - self._y[idx]) / dt
             else:
                 return 0
 

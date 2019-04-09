@@ -50,6 +50,8 @@ class BaseSensorState:
 
 
 class SensorError(BaseSensorState):
+    name = 'SENSOR_ERROR'
+
     def __init__(self, timestamp, error):
         self.begin_time = timestamp
         self.error = error

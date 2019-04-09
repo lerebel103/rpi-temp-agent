@@ -69,6 +69,17 @@ class TempController:
         logger.info('Controller stopped.')
 
     def tick(self, now):
+        # Tick state machine
+        if self._state['mode'] == Mode.ACTIVE:
+            if self._state_machine is None:
+                self._state_machine = BBQStateMachine()
+            ctx = StateContext(now, self._state, self._temp_sensors, accumulators=self._accumulators,
+                               db=self._data_logger)
+            self._state_machine.run(ctx)
+        else:
+            self._state_machine = None
+
+
         # Spin through all sensors and control the the thing
         temps = []
         for sensor_name in self._accumulators:
@@ -83,18 +94,12 @@ class TempController:
 
             # Publish data for these sensors
             if self._send_loop_count == 0:
+                if self._state_machine != None:
+                    sensor_state['state'] = self._state_machine.current_state_name(sensor_name)
+                else:
+                    sensor_state['state'] = '--'
                 topic = self.topic + '/temperature/{}'.format(sensor_name)
                 self._client.publish(topic, json.dumps(sensor_state))
-
-        # Tick state machine
-        if self._state['mode'] == Mode.ACTIVE:
-            if self._state_machine is None:
-                self._state_machine = BBQStateMachine()
-            ctx = StateContext(now, self._state, self._temp_sensors, accumulators=self._accumulators,
-                               db=self._data_logger)
-            self._state_machine.run(ctx)
-        else:
-            self._state_machine = None
 
         # Publish and log more data
         if self._send_loop_count == 0:

@@ -39,6 +39,8 @@ def is_up_to_temp(temp, set_point):
 
 
 class PitInitial(BaseSensorState):
+    name = 'PIT_ANALYSING'
+
     def __init__(self):
         # TODO enable fan here
         pass
@@ -49,7 +51,7 @@ class PitInitial(BaseSensorState):
         if abs(temp - set_point) <= set_point * SETPOINT_ERROR_PERC:
             # Cool we are in steady state
             return UpToTemp()
-        elif self.ctx.accumulators[self.sensor_name].interval() < 60:
+        elif self.ctx.accumulators[self.sensor_name].interval() < 20:
             # Then we need to have enough data to make sense of anything
             return self
         elif temp < set_point:
@@ -60,6 +62,7 @@ class PitInitial(BaseSensorState):
 
 class ComingToTemp(BaseSensorState):
     """ We're heating up, but keep an eye on trends ..."""
+    name = 'PIT_HEATING'
 
     def handle_temp(self, temp, set_point):
 
@@ -76,6 +79,8 @@ class ComingToTemp(BaseSensorState):
 
 
 class UpToTemp(BaseSensorState):
+    name = 'PIT_UP_TO_TEMP'
+
     def handle_temp(self, temp, set_point):
         if is_up_to_temp(temp, set_point):
             # Cool we are in steady state
@@ -92,6 +97,8 @@ class UpToTemp(BaseSensorState):
 
 
 class OverTemp(BaseSensorState):
+    name = 'PIT_OVER_TEMP'
+
     def handle_temp(self, temp, set_point):
         if temp < set_point + set_point * SETPOINT_ERROR_PERC:
             return UpToTemp()
@@ -100,10 +107,10 @@ class OverTemp(BaseSensorState):
 
 
 class LidOpen(BaseSensorState):
+    name = 'PIT_LID_OPEN'
 
     def __init__(self, t):
         self.begin_time = t
-
         # TODO cut out fan here
 
     def handle_temp(self, temp, set_point):
@@ -118,6 +125,8 @@ class LidOpen(BaseSensorState):
 
 
 class FlameOut(BaseSensorState):
+    name = 'PIT_FLAME_OUT'
+
     def __init__(self):
         # TODO bring fan to min
         pass
@@ -128,3 +137,4 @@ class FlameOut(BaseSensorState):
         else:
             # Start over again
             return PitInitial()
+

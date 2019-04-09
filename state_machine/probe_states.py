@@ -15,6 +15,8 @@ ALERT_SENSOR_ERROR_THRESHOLD = 60
 
 
 class SetPointInitial(BaseSensorState):
+    name = 'PROBE_ANALYSING'
+
     def handle_temp(self, temp, set_point):
         if temp < set_point:
             return SetPointUnder(self.ctx.timestamp)
@@ -23,6 +25,8 @@ class SetPointInitial(BaseSensorState):
 
 
 class SetPointUnder(BaseSensorState):
+    name = 'PROBE_UNDER_SETPOINT'
+
     def __init__(self, t):
         self.begin_time = t
 
@@ -37,6 +41,8 @@ class SetPointUnder(BaseSensorState):
 
 
 class SetPointOver(BaseSensorState):
+    name = 'PROBE_REACHED_SETPOINT'
+
     def __init__(self, t):
         self.begin_time = t
 
@@ -53,6 +59,8 @@ class SetPointOver(BaseSensorState):
 
 
 class SetPointOverAlarm(BaseSensorState):
+    name = 'PROBE_REACHED_SETPOINT_ALARM'
+
     def __init__(self, t):
         self.begin_time = t
         self._alarm_sent = False

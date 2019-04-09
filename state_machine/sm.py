@@ -20,6 +20,10 @@ class BBQStateMachine:
             'probe2': StateContext.probe_init_state_class(),
         }
 
+    def current_state_name(self, sensor_name):
+        """ Current state friendly name for a given sensor """
+        return self.current_states[sensor_name].name
+
     def run(self, ctx):
         # Run states and transition, very simple
         for sensor in self.current_states.keys():

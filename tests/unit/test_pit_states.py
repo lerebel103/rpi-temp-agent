@@ -10,10 +10,13 @@ from peripherals.temperature_sensors import Max31850Sensors
 
 
 class TestInitialState(unittest.TestCase):
+    def setUp(self):
+        self.setUp2()
 
     @patch('peripherals.temperature_sensors.Max31850Sensors')
-    def setUp(self, Sensors):
+    def setUp2(self, Sensors):
         self.Sensors = Sensors
+        DEFAULT_ACCUMULATORS['pit'].reset()
         self.sensor_name = 'pit'
         self.user_config = {'pit': {'setPoint': 100}}
 
@@ -147,11 +150,13 @@ class TestComingToTemp(unittest.TestCase):
                 break
 
         self.assertEqual(FlameOut, next_state.__class__)
-        self.assertEqual(85, i)
+        self.assertEqual(102, i)
 
     def test_up_to_temp(self):
         """ We're ok, in band of setpoint """
         sensors = self.Sensors()
+
+        DEFAULT_ACCUMULATORS['pit'].reset()
 
         # middle
         sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK,
@@ -175,13 +180,13 @@ class TestComingToTemp(unittest.TestCase):
         sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK,
                                             'temp': 100 + 100*SETPOINT_ERROR_PERC}
         s = ComingToTemp()
-        ctx = StateContext(0, self.user_config, sensors)
+        ctx = StateContext(30, self.user_config, sensors)
         next_state = s.run(self.sensor_name, ctx)
 
         # Off boundary (Down)
         sensors.sensor_temp.return_value = {'status': Max31850Sensors.Status.OK,
-                                            'temp': 100 - 100*SETPOINT_ERROR_PERC - 0.1}
-        ctx = StateContext(0, self.user_config, sensors)
+                                            'temp': 100 - 100*SETPOINT_ERROR_PERC - 0.3}
+        ctx = StateContext(90, self.user_config, sensors)
         s = ComingToTemp()
         next_state = s.run(self.sensor_name, ctx)
 

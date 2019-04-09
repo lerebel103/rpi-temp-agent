@@ -4,9 +4,8 @@ from state_machine.common_states import BaseSensorState
 
 logger = logging.getLogger(__name__)
 
-
 # This gives us some way of looking at long term trends
-LONG_TERM_INTERVAL = 5*60
+LONG_TERM_INTERVAL = 5 * 60
 
 # Short term trends, like lid opening
 SHORT_TERM_INTERVAL = 5
@@ -36,13 +35,18 @@ def is_flame_out(ctx, sensor_name):
 
 
 def is_up_to_temp(temp, set_point):
-    return abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC
+    return abs(temp - set_point) <= set_point * SETPOINT_ERROR_PERC
 
 
 class PitInitial(BaseSensorState):
+    def __init__(self):
+        # TODO enable fan here
+        pass
+
     """ Initial state, work out what state we're in... """
+
     def handle_temp(self, temp, set_point):
-        if abs(temp - set_point) <= set_point*SETPOINT_ERROR_PERC:
+        if abs(temp - set_point) <= set_point * SETPOINT_ERROR_PERC:
             # Cool we are in steady state
             return UpToTemp()
         elif self.ctx.accumulators[self.sensor_name].interval() < 60:
@@ -63,7 +67,7 @@ class ComingToTemp(BaseSensorState):
             # Cool we are in steady state
             return UpToTemp()
         elif is_lid_open(self.ctx, self.sensor_name):
-            return LidOpen()
+            return LidOpen(self.ctx)
         elif is_flame_out(self.ctx, self.sensor_name):
             # We have a problem, we keep on trying but temp keeps going down, flame out
             return FlameOut()
@@ -77,36 +81,49 @@ class UpToTemp(BaseSensorState):
             # Cool we are in steady state
             return self
         elif is_lid_open(self.ctx, self.sensor_name):
-            return LidOpen()
+            return LidOpen(self.ctx)
         elif is_flame_out(self.ctx, self.sensor_name):
             # We have a problem, we keep on trying but temp keeps going down, flame out
             return FlameOut()
-        elif temp < set_point - set_point*SETPOINT_ERROR_PERC:
+        elif temp < set_point - set_point * SETPOINT_ERROR_PERC:
             return ComingToTemp()
         else:
             return OverTemp()
 
 
 class OverTemp(BaseSensorState):
-    def handle_temp(self, temp, set_point):    
-        if temp < set_point + set_point*SETPOINT_ERROR_PERC:
+    def handle_temp(self, temp, set_point):
+        if temp < set_point + set_point * SETPOINT_ERROR_PERC:
             return UpToTemp()
         else:
             return self
 
 
 class LidOpen(BaseSensorState):
+
+    def __init__(self, t):
+        self.begin_time = t
+
+        # TODO cut out fan here
+
     def handle_temp(self, temp, set_point):
-        if is_lid_open(self.ctx, self.sensor_name):
-            return self
-        else:
-            # Start over again
+        t_short = self.ctx.timestamp - SHORT_TERM_INTERVAL
+        d_short = self.ctx.accumulators[self.sensor_name].linear_derivative(t_short) * 60
+
+        if d_short > 1 or (self.ctx.timestamp - self.begin_time) > 2 * 60:
+            # Temperature has started to climb again, or we have timed out in lid open
             return PitInitial()
+        else:
+            return self
 
 
 class FlameOut(BaseSensorState):
+    def __init__(self):
+        # TODO bring fan to min
+        pass
+
     def handle_temp(self, temp, set_point):
-        if is_flame_out(self.ctx, self.sensor_name):
+        if is_flame_out(self.ctx, self.sensor_name) and temp < set_point - set_point * SETPOINT_ERROR_PERC:
             return self
         else:
             # Start over again

@@ -128,6 +128,7 @@ class LidOpen(BaseSensorState):
 
     def __init__(self, t):
         self.begin_time = t
+        global last_lid_open_timestamp
         last_lid_open_timestamp = t
 
     def handle_temp(self, temp, set_point):

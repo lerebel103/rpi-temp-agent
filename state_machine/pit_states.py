@@ -93,7 +93,7 @@ class ComingToTemp(BaseSensorState):
             return LidOpen(self.ctx.timestamp)
         elif is_flame_out(self.ctx, self.sensor_name, temp):
             # We have a problem, we keep on trying but temp keeps going down, flame out
-            return FlameOut()
+            return FlameOut(self.ctx.timestamp)
         else:
             return self
 
@@ -145,10 +145,26 @@ class LidOpen(BaseSensorState):
 class FlameOut(BaseSensorState):
     name = 'PIT_FLAME_OUT'
 
+    def __init__(self, t):
+        self.begin_time = t
+        self.last_sent_time = t
+        self._alarm_sent = False
+
     def handle_temp(self, temp, set_point):
         if is_heating_again(self.ctx, self.sensor_name) or temp >= (set_point - set_point * SETPOINT_ERROR_PERC):
             # Start over again
             return PitInitial()
         else:
+            # Send out alarm if we are settled in this state after a short while (avoid spurious transition)
+            if not self._alarm_sent and (self.ctx.timestamp - self.begin_time) > 30:
+                msg = 'Flame out on {}, oh no! Help!'.format(self.sensor_name)
+                self.last_sent_time = self.ctx.timestamp
+                self._alarm_sent = self.send_alarm(msg, {'sensor': self.sensor_name, 'temp': temp, 'setPoint': set_point})
+            else:
+                # It turns out expo does not support custom sounds, which is a problem to make this
+                # work like an alarm. So instead, we repeatedly send the alert, until it is acted upon
+                if self.ctx.timestamp - self.last_sent_time > 5:
+                    self._alarm_sent = False
+
             return self
 

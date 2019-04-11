@@ -121,7 +121,7 @@ class TempController:
         duty_cycle = 0
         
         if self._state['mode'] == Mode.ACTIVE:
-            if pit_state == 'SENSOR_ERROR' or pit_state == 'PIT_LID_OPEN':
+            if pit_state == 'SENSOR_ERROR' or pit_state == 'PIT_LID_OPEN' or pit_state == 'PIT_OVER_TEMP':
                # Nope, no fan needed here
                self._blower_fan.off()
             elif pit_state == 'PIT_FLAME_OUT':

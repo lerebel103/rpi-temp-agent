@@ -19,6 +19,13 @@ SETPOINT_ERROR_PERC = 0.05
 # Lid open derivative
 LID_OPEN_DERIVATIVE = -10  # Celcius/min
 
+# So below this temp we won't attempt to work if we have a flame out,
+# things are too unstable below this
+FLAME_OUT_DETECT_MIN_TEMP = 50
+
+# Keeps track of the last time lid was opened
+last_lid_open_timestamp = None
+
 
 def is_lid_open(ctx, sensor_name):
     t_short = ctx.timestamp - SHORT_TERM_INTERVAL
@@ -27,11 +34,17 @@ def is_lid_open(ctx, sensor_name):
     return d_short < LID_OPEN_DERIVATIVE
 
 
-def is_flame_out(ctx, sensor_name):
-    t_long = ctx.timestamp - LONG_TERM_INTERVAL
-    d_long = ctx.accumulators[sensor_name].linear_derivative(t_long) * 60
-
-    return d_long < -STALL_THRESHOLD
+def is_flame_out(ctx, sensor_name, temp):
+    if temp < FLAME_OUT_DETECT_MIN_TEMP:
+        return False
+    elif last_lid_open_timestamp is not None and  (ctx.timestamp - last_lid_open_timestamp) < LONG_TERM_INTERVAL:
+        # Here we are too close to the last time the lid was open, can't make a decision
+        # based on historical data, as it is skewed
+        return False
+    else:
+        t_long = ctx.timestamp - LONG_TERM_INTERVAL
+        d_long = ctx.accumulators[sensor_name].linear_derivative(t_long) * 60
+        return d_long < -STALL_THRESHOLD
 
 
 def is_heating_again(ctx, sensor_name):
@@ -78,7 +91,7 @@ class ComingToTemp(BaseSensorState):
             return UpToTemp()
         elif is_lid_open(self.ctx, self.sensor_name):
             return LidOpen(self.ctx.timestamp)
-        elif is_flame_out(self.ctx, self.sensor_name):
+        elif is_flame_out(self.ctx, self.sensor_name, temp):
             # We have a problem, we keep on trying but temp keeps going down, flame out
             return FlameOut()
         else:
@@ -94,9 +107,6 @@ class UpToTemp(BaseSensorState):
             return self
         elif is_lid_open(self.ctx, self.sensor_name):
             return LidOpen(self.ctx.timestamp)
-        elif is_flame_out(self.ctx, self.sensor_name):
-            # We have a problem, we keep on trying but temp keeps going down, flame out
-            return FlameOut()
         elif temp < set_point - set_point * SETPOINT_ERROR_PERC:
             return ComingToTemp()
         else:
@@ -118,7 +128,7 @@ class LidOpen(BaseSensorState):
 
     def __init__(self, t):
         self.begin_time = t
-        # TODO cut out fan here
+        last_lid_open_timestamp = t
 
     def handle_temp(self, temp, set_point):
         t_short = self.ctx.timestamp - SHORT_TERM_INTERVAL
@@ -133,10 +143,6 @@ class LidOpen(BaseSensorState):
 
 class FlameOut(BaseSensorState):
     name = 'PIT_FLAME_OUT'
-
-    def __init__(self):
-        # TODO bring fan to min
-        pass
 
     def handle_temp(self, temp, set_point):
         if is_heating_again(self.ctx, self.sensor_name) or temp >= (set_point - set_point * SETPOINT_ERROR_PERC):

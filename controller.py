@@ -83,23 +83,24 @@ class TempController:
         # Spin through all sensors and control the the thing
         temps = []
         for sensor_name in self._accumulators:
-            sensor_state = self._temp_sensors.sensor_temp(sensor_name)
-            if sensor_state['status'] == Max31850Sensors.Status.OK:
-                temp = sensor_state['temp']
-                # Start by accumulating values over time
-                temps.append((sensor_name, sensor_state))
+            sensor_data = self._temp_sensors.sensor_temp(sensor_name)
 
-                if sensor_name == 'pit':
-                    self._control_pit(now, temp)
+            # Add current state from state machine
+            if self._state_machine != None:
+                sensor_data['state'] = self._state_machine.current_state_name(sensor_name)
+            else:
+                sensor_data['state'] = '--'
+
+            # Start by accumulating values over time
+            temps.append((sensor_name, sensor_data))
+            
+            if sensor_name == 'pit':
+                self._control_pit(now, sensor_data)
 
             # Publish data for these sensors
             if self._send_loop_count == 0:
-                if self._state_machine != None:
-                    sensor_state['state'] = self._state_machine.current_state_name(sensor_name)
-                else:
-                    sensor_state['state'] = '--'
                 topic = self.topic + '/temperature/{}'.format(sensor_name)
-                self._client.publish(topic, json.dumps(sensor_state))
+                self._client.publish(topic, json.dumps(sensor_data))
 
         # Publish and log more data
         if self._send_loop_count == 0:
@@ -114,20 +115,33 @@ class TempController:
         if self._send_loop_count > self._config['controller']['send_data_loop_count']:
             self._send_loop_count = 0
 
-    def _control_pit(self, now, pit_temp):
+    def _control_pit(self, now, sensor_data):
         # Calculate duty cycle
+        pit_state = sensor_data['state']
         duty_cycle = 0
+        
         if self._state['mode'] == Mode.ACTIVE:
-            duty_cycle = self._pid.update(now, pit_temp)
-            duty_cycle += self._config['controller']['blower_cycle_min']
-            duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
-            duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
-
-            # Set fan duty cycle and collect RPM
-            self._blower_fan.duty_cycle = duty_cycle
-            self._blower_fan.on()  # Always make sure fan is on
+            if pit_state == 'SENSOR_ERROR' or pit_state == 'PIT_LID_OPEN':
+               # Nope, no fan needed here
+               self._blower_fan.off()
+            elif pit_state == 'PIT_FLAME_OUT':
+                # Keep a little bit of airflow going, it may come back
+                # but we don't want to accelerate the decay by pushing in more cold air
+                duty_cycle = 10
+                self._blower_fan.duty_cycle = duty_cycle
+                self._blower_fan.on()
+            elif sensor_data['status'] == Max31850Sensors.Status.OK:
+                duty_cycle = self._pid.update(now, sensor_data['temp'])
+                duty_cycle += self._config['controller']['blower_cycle_min']
+                duty_cycle = max(duty_cycle, self._config['controller']['blower_cycle_min'])
+                duty_cycle = min(duty_cycle, self._config['controller']['blower_cycle_max'])
+                self._blower_fan.duty_cycle = duty_cycle
+                self._blower_fan.on()
+            else:
+                self._blower_fan.off()
         else:
-            self._blower_fan.off()  # Always make sure fan is off
+            self._blower_fan.off()
+
 
         if self._send_loop_count == 0:
             # Publish Fan state

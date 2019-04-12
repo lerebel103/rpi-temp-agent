@@ -2,6 +2,7 @@ import logging
 
 from peripherals.temperature_sensors import Max31850Sensors
 from notifications.notify import push_all
+from state_machine.state_names import SENSOR_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class BaseSensorState:
 
 
 class SensorError(BaseSensorState):
-    name = 'SENSOR_ERROR'
+    name = SENSOR_ERROR
 
     def __init__(self, timestamp, error):
         self.begin_time = timestamp

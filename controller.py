@@ -10,6 +10,7 @@ from peripherals.temperature_sensors import Max31850Sensors
 from pid import PID
 from state_machine.sm import BBQStateMachine
 from state_machine.state_context import StateContext, DEFAULT_ACCUMULATORS
+from state_machine.state_names import PIT_OVER_TEMP, SENSOR_ERROR, PIT_LID_OPEN, PIT_FLAME_OUT
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,6 @@ class TempController:
         else:
             self._state_machine = None
 
-
         # Spin through all sensors and control the the thing
         temps = []
         for sensor_name in self._accumulators:
@@ -93,7 +93,7 @@ class TempController:
 
             # Start by accumulating values over time
             temps.append((sensor_name, sensor_data))
-            
+
             if sensor_name == 'pit':
                 self._control_pit(now, sensor_data)
 
@@ -119,12 +119,12 @@ class TempController:
         # Calculate duty cycle
         pit_state = sensor_data['state']
         duty_cycle = 0
-        
+
         if self._state['mode'] == Mode.ACTIVE:
-            if pit_state == 'SENSOR_ERROR' or pit_state == 'PIT_LID_OPEN' or pit_state == 'PIT_OVER_TEMP':
-               # Nope, no fan needed here
-               self._blower_fan.off()
-            elif pit_state == 'PIT_FLAME_OUT':
+            if pit_state == SENSOR_ERROR or pit_state == PIT_LID_OPEN or pit_state == PIT_OVER_TEMP:
+                # Nope, no fan needed here
+                self._blower_fan.off()
+            elif pit_state == PIT_FLAME_OUT:
                 # Keep a little bit of airflow going, it may come back
                 # but we don't want to accelerate the decay by pushing in more cold air
                 duty_cycle = 10
@@ -141,7 +141,6 @@ class TempController:
                 self._blower_fan.off()
         else:
             self._blower_fan.off()
-
 
         if self._send_loop_count == 0:
             # Publish Fan state

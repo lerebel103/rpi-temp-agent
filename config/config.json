@@ -1,9 +1,9 @@
 {
     "controller": {
-        "D": 5,
+        "D": 6,
         "I": 0.5,
         "P": 2,
-        "blower_cycle_max": 60,
+        "blower_cycle_max": 75,
         "blower_cycle_min": 6,
         "send_data_loop_count": 0
     },
@@ -30,18 +30,18 @@
     "temperature": {
         "pit": {
             "id": "3B-0CD8065D94D6",
-            "temperature_offset": -8
+            "temperature_offset": -5.50
         },
         "board": {
             "temperature_offset": 0
         },
         "probe1": {
             "id": "3B-0CD8065DAB7B",
-            "temperature_offset": -8
+            "temperature_offset": -4.5
         },
         "probe2": {
             "id": "3B-0CD8065DAB7B",
-            "temperature_offset": -8
+            "temperature_offset": -4.5
         },
         "gpio": 17,
         "sampling_seconds": 1.0
